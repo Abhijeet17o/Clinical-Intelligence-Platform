@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory - EHR System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h3>📦 Medicine Inventory</h3>
+    
+    {% if low_stock_count > 0 %}
+        <div class="alert alert-warning">
+            <strong>⚠️ Low Stock Alert!</strong> 
+            {{ low_stock_count }} medicine(s) are running low on stock.
+        </div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Medicine Name</th>
+                <th>Description</th>
+                <th>Stock Level</th>
+                <th>Status</th>
+                <th>Prescription Frequency</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for med in medicines %}
+            <tr>
+                <td><strong>{{ med.name }}</strong></td>
+                <td>{{ med.description }}</td>
+                <td>
+                    <strong {% if med.stock_level < 10 %}style="color: #dc3545;"{% endif %}>
+                        {{ med.stock_level }} units
+                    </strong>
+                </td>
+                <td>
+                    {% if med.stock_level == 0 %}
+                        <span class="badge badge-danger">OUT OF STOCK</span>
+                    {% elif med.stock_level < 10 %}
+                        <span class="badge badge-warning">LOW STOCK</span>
+                    {% else %}
+                        <span class="badge badge-success">IN STOCK</span>
+                    {% endif %}
+                </td>
+                <td>{{ med.prescription_frequency }} times</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div style="margin-top: 20px;">
+    <a href="/" class="btn btn-secondary">← Back to Home</a>
+</div>
+{% endblock %}

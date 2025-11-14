@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Home - EHR System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h3>📋 Patient Sessions</h3>
+    
+    {% if sessions %}
+        <p>Select a session to view recommendations and finalize prescription:</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Session ID</th>
+                    <th>Patient ID</th>
+                    <th>Patient Name</th>
+                    <th>Timestamp</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for session in sessions %}
+                <tr>
+                    <td><span class="badge badge-info">{{ session.session_id }}</span></td>
+                    <td>{{ session.patient_id }}</td>
+                    <td>{{ session.patient_name }}</td>
+                    <td>{{ session.timestamp }}</td>
+                    <td>
+                        {% if session.transcript_file %}
+                            <a href="/prescription?file=data/sessions/{{ session.session_id }}/{{ session.transcript_file }}" 
+                               class="btn" style="padding: 8px 16px; font-size: 14px;">
+                                View Prescription
+                            </a>
+                        {% else %}
+                            <span class="badge badge-warning">No Transcript</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-info">
+            <strong>ℹ️ No sessions found</strong>
+            <p>Run the pipeline (<code>python run_pipeline.py</code>) to create patient sessions.</p>
+        </div>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>🚀 Quick Actions</h3>
+    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+        <a href="/inventory" class="btn">📦 View Inventory</a>
+        <button onclick="window.location.reload()" class="btn btn-secondary">🔄 Refresh Sessions</button>
+    </div>
+</div>
+{% endblock %}
