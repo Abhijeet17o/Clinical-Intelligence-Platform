@@ -43,6 +43,7 @@ class MedicineDatabase:
             
             # Create tables if they don't exist
             self._create_tables()
+            self._create_patients_table()
             
         except sqlite3.Error as e:
             logger.error(f"Error connecting to database: {e}")
@@ -77,6 +78,37 @@ class MedicineDatabase:
             
         except sqlite3.Error as e:
             logger.error(f"Error creating tables: {e}")
+            raise
+    
+    def _create_patients_table(self):
+        """
+        Create the patients table if it doesn't already exist.
+        
+        Table schema:
+            - patient_id: TEXT PRIMARY KEY (unique patient identifier)
+            - full_name: TEXT (patient's full name)
+            - date_of_birth: TEXT (patient's date of birth)
+            - contact_info: TEXT (patient's contact information)
+            - ehr_data: TEXT (JSON string containing electronic health record data)
+        """
+        try:
+            cursor = self.connection.cursor()
+            
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS patients (
+                    patient_id TEXT PRIMARY KEY,
+                    full_name TEXT NOT NULL,
+                    date_of_birth TEXT,
+                    contact_info TEXT,
+                    ehr_data TEXT NOT NULL DEFAULT '{}'
+                )
+            ''')
+            
+            self.connection.commit()
+            logger.info("✓ Patients table ready")
+            
+        except sqlite3.Error as e:
+            logger.error(f"Error creating patients table: {e}")
             raise
     
     def add_medicine(self, name: str, description: str, stock_level: int) -> bool:
@@ -305,6 +337,152 @@ class MedicineDatabase:
             
         except sqlite3.Error as e:
             logger.error(f"Error checking low stock: {e}")
+            return []
+    
+    # ========== PATIENT MANAGEMENT METHODS ==========
+    
+    def add_new_patient(self, patient_id: str, full_name: str, 
+                       date_of_birth: str = '', contact_info: str = '') -> bool:
+        """
+        Add a new patient to the database.
+        
+        Args:
+            patient_id (str): Unique identifier for the patient
+            full_name (str): Patient's full name
+            date_of_birth (str): Patient's date of birth (optional)
+            contact_info (str): Patient's contact information (optional)
+        
+        Returns:
+            bool: True if successful, False otherwise
+        
+        Raises:
+            ValueError: If patient_id or full_name is empty
+        """
+        # Input validation
+        if not patient_id or not patient_id.strip():
+            raise ValueError("Patient ID cannot be empty")
+        
+        if not full_name or not full_name.strip():
+            raise ValueError("Patient name cannot be empty")
+        
+        try:
+            cursor = self.connection.cursor()
+            
+            # Initial EHR data is an empty JSON object
+            initial_ehr = '{}'
+            
+            cursor.execute('''
+                INSERT INTO patients (patient_id, full_name, date_of_birth, contact_info, ehr_data)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (patient_id.strip(), full_name.strip(), date_of_birth.strip(), 
+                  contact_info.strip(), initial_ehr))
+            
+            self.connection.commit()
+            logger.info(f"✓ Added new patient: {full_name} (ID: {patient_id})")
+            return True
+            
+        except sqlite3.IntegrityError:
+            logger.warning(f"Patient with ID '{patient_id}' already exists in database")
+            return False
+        except sqlite3.Error as e:
+            logger.error(f"Error adding patient: {e}")
+            return False
+    
+    def get_patient(self, patient_id: str) -> Optional[Dict]:
+        """
+        Retrieve a specific patient's complete record by patient ID.
+        
+        Args:
+            patient_id (str): Unique identifier for the patient
+        
+        Returns:
+            Dict or None: Dictionary with patient details, or None if not found
+                         Keys: patient_id, full_name, date_of_birth, contact_info, ehr_data
+        """
+        try:
+            cursor = self.connection.cursor()
+            
+            cursor.execute('SELECT * FROM patients WHERE patient_id = ?', (patient_id,))
+            row = cursor.fetchone()
+            
+            if row:
+                return {
+                    'patient_id': row['patient_id'],
+                    'full_name': row['full_name'],
+                    'date_of_birth': row['date_of_birth'],
+                    'contact_info': row['contact_info'],
+                    'ehr_data': row['ehr_data']
+                }
+            else:
+                logger.warning(f"Patient with ID '{patient_id}' not found")
+                return None
+                
+        except sqlite3.Error as e:
+            logger.error(f"Error retrieving patient: {e}")
+            return None
+    
+    def update_patient_ehr(self, patient_id: str, updated_ehr_json_string: str) -> bool:
+        """
+        Update the EHR data for a specific patient.
+        
+        Args:
+            patient_id (str): Unique identifier for the patient
+            updated_ehr_json_string (str): Updated EHR data as a JSON string
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            cursor = self.connection.cursor()
+            
+            cursor.execute('''
+                UPDATE patients 
+                SET ehr_data = ?
+                WHERE patient_id = ?
+            ''', (updated_ehr_json_string, patient_id))
+            
+            if cursor.rowcount == 0:
+                logger.warning(f"Patient with ID '{patient_id}' not found in database")
+                return False
+            
+            self.connection.commit()
+            logger.info(f"✓ Updated EHR data for patient: {patient_id}")
+            return True
+            
+        except sqlite3.Error as e:
+            logger.error(f"Error updating patient EHR: {e}")
+            return False
+    
+    def get_all_patients(self) -> List[Dict]:
+        """
+        Retrieve all patients from the database.
+        
+        Returns:
+            List[Dict]: List of dictionaries, where each dictionary represents a patient
+                       with keys: patient_id, full_name, date_of_birth, contact_info, ehr_data
+        """
+        try:
+            cursor = self.connection.cursor()
+            
+            cursor.execute('SELECT * FROM patients ORDER BY full_name')
+            rows = cursor.fetchall()
+            
+            # Convert rows to list of dictionaries
+            patients = []
+            for row in rows:
+                patients.append({
+                    'patient_id': row['patient_id'],
+                    'full_name': row['full_name'],
+                    'date_of_birth': row['date_of_birth'],
+                    'contact_info': row['contact_info'],
+                    'ehr_data': row['ehr_data']
+                })
+            
+            logger.info(f"✓ Retrieved {len(patients)} patients from database")
+            return patients
+            
+        except sqlite3.Error as e:
+            logger.error(f"Error retrieving patients: {e}")
             return []
     
     def close_connection(self):
