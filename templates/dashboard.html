@@ -56,6 +56,8 @@
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 2px solid #e0e0e0;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .action-bar h2 {
@@ -251,9 +253,14 @@
             
             <div class="action-bar">
                 <h2>Registered Patients</h2>
-                <a href="/new_patient" class="btn-primary">
-                    ➕ Add New Patient
-                </a>
+                <div style="display: flex; gap: 15px;">
+                    <a href="/pharmacy" class="btn-primary">
+                        💊 Pharmacy Manager
+                    </a>
+                    <a href="/new_patient" class="btn-primary">
+                        ➕ Add New Patient
+                    </a>
+                </div>
             </div>
             
             {% if patients %}

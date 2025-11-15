@@ -85,6 +85,7 @@ print(f"\n📍 Access the application at: http://127.0.0.1:5000")
 print("\nAvailable routes:")
 print("  • Patient Dashboard:  http://127.0.0.1:5000/")
 print("  • Add New Patient:    http://127.0.0.1:5000/new_patient")
+print("  • Pharmacy Manager:   http://127.0.0.1:5000/pharmacy")
 print("\n" + "="*70 + "\n")
 
 
@@ -548,6 +549,109 @@ def appointment(patient_id):
     
     # Render the appointment template with patient data
     return render_template('appointment.html', patient=patient)
+
+
+@app.route('/pharmacy')
+def pharmacy_management():
+    """
+    Pharmacy Management - View all medicines
+    
+    Displays all medicines in the database with their details.
+    """
+    logger.info("Loading pharmacy management page")
+    
+    db = get_db()
+    medicines = db.get_all_medicines()
+    
+    logger.info(f"Retrieved {len(medicines)} medicines")
+    
+    return render_template('pharmacy.html', medicines=medicines)
+
+
+@app.route('/add_medicine', methods=['POST'])
+def add_medicine():
+    """Add new medicine to database"""
+    try:
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        stock_level = int(request.form.get('stock_level', 0))
+        
+        if not name:
+            return jsonify({'success': False, 'error': 'Medicine name is required'}), 400
+        
+        db = get_db()
+        success = db.add_medicine(name, description, stock_level)
+        
+        if success:
+            logger.info(f"Added new medicine: {name}")
+            return jsonify({'success': True, 'message': f'Medicine "{name}" added successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Medicine already exists or database error'}), 400
+            
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid stock level'}), 400
+    except Exception as e:
+        logger.error(f"Error adding medicine: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/update_medicine/<int:medicine_id>', methods=['POST'])
+def update_medicine(medicine_id):
+    """Update existing medicine"""
+    try:
+        name = request.form.get('name', '').strip()
+        description = request.form.get('description', '').strip()
+        stock_level = int(request.form.get('stock_level', 0))
+        
+        if not name:
+            return jsonify({'success': False, 'error': 'Medicine name is required'}), 400
+        
+        db = get_db()
+        cursor = db.connection.cursor()
+        
+        cursor.execute('''
+            UPDATE medicines 
+            SET name = ?, description = ?, stock_level = ?
+            WHERE id = ?
+        ''', (name, description, stock_level, medicine_id))
+        
+        db.connection.commit()
+        
+        logger.info(f"Updated medicine ID {medicine_id}: {name}")
+        return jsonify({'success': True, 'message': f'Medicine "{name}" updated successfully'})
+        
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid stock level'}), 400
+    except Exception as e:
+        logger.error(f"Error updating medicine: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/delete_medicine/<int:medicine_id>', methods=['POST'])
+def delete_medicine(medicine_id):
+    """Delete medicine from database"""
+    try:
+        db = get_db()
+        cursor = db.connection.cursor()
+        
+        # Get medicine name first for logging
+        cursor.execute('SELECT name FROM medicines WHERE id = ?', (medicine_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            return jsonify({'success': False, 'error': 'Medicine not found'}), 404
+        
+        medicine_name = result[0]
+        
+        cursor.execute('DELETE FROM medicines WHERE id = ?', (medicine_id,))
+        db.connection.commit()
+        
+        logger.info(f"Deleted medicine ID {medicine_id}: {medicine_name}")
+        return jsonify({'success': True, 'message': f'Medicine "{medicine_name}" deleted successfully'})
+        
+    except Exception as e:
+        logger.error(f"Error deleting medicine: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # Cleanup database connection when app shuts down

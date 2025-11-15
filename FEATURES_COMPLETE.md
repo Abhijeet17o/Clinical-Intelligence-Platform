@@ -87,11 +87,15 @@ python app.py
 **Solution:** Implemented `get_db()` function for per-request connections
 **Result:** Thread-safe database access
 
-### Issue 4: Transcription File Path Errors
-**Problem:** Transcript output directory not specified
-**Solution:** Created session-specific directories with subdirectories:
-- `data/sessions/{patient_id}_{timestamp}/`
-- `data/sessions/{patient_id}_{timestamp}/transcripts/`
+### Issue 4: FFmpeg Dependency Missing
+**Problem:** Whisper AI requires FFmpeg to process audio files
+**Solution:** Created `install_ffmpeg.py` to auto-download and configure FFmpeg
+**Result:** FFmpeg automatically installed to `ffmpeg/bin/` on first run
+
+### Issue 5: JSON Serialization Errors
+**Problem:** numpy.float32 similarity scores not JSON serializable
+**Solution:** Convert to Python float before JSON response
+**Result:** Recommendations display correctly with percentage scores
 
 ---
 
@@ -306,6 +310,24 @@ For issues or questions:
 
 ---
 
-**Last Updated:** November 15, 2025  
+## 🛠️ EASY SETUP
+
+### Quick Start (Windows)
+Double-click `start_server.bat` - automatically installs FFmpeg if needed!
+
+### Manual Start
+```powershell
+python app.py --no-reload
+```
+
+### First-Time Setup
+1. Install dependencies: `pip install -r requirements.txt`
+2. Create `.env` file with your `GEMINI_API_KEY=your_key_here`
+3. Populate database: `python populate_database.py`
+4. Run server: `start_server.bat` or `python app.py --no-reload`
+
+---
+
+**Last Updated:** November 16, 2025  
 **Version:** 2.0 (Web Application)  
 **Status:** ✅ Fully Functional - All Features Implemented
