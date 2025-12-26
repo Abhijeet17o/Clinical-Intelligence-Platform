@@ -1,0 +1,134 @@
+{
+  "events": [
+    {
+      "id": 1,
+      "timestamp": "2025-12-27T04:09:07.443775",
+      "symptoms": " Oh my stomach hurts, what should I do? Along with that there is a headache.",
+      "recommended_medicines": [
+        "Paracetamol",
+        "Paracetamol 500mg",
+        "Omeprazole 20mg",
+        "Metformin",
+        "Ibuprofen"
+      ],
+      "selected_medicine": "Ibuprofen",
+      "weights_before": {
+        "semantic": 0.25,
+        "tfidf": 0.25,
+        "knowledge": 0.25,
+        "collaborative": 0.25
+      },
+      "weights_after": {
+        "semantic": 0.2291095890410959,
+        "tfidf": 0.23321917808219178,
+        "knowledge": 0.23732876712328768,
+        "collaborative": 0.30034246575342466
+      },
+      "weight_changes": {
+        "semantic": -0.020890410958904093,
+        "tfidf": -0.01678082191780822,
+        "knowledge": -0.012671232876712318,
+        "collaborative": 0.05034246575342466
+      },
+      "learning_count": 1
+    },
+    {
+      "id": 2,
+      "timestamp": "2025-12-27T04:09:07.501952",
+      "symptoms": " Oh my stomach hurts, what should I do? Along with that there is a headache.",
+      "recommended_medicines": [
+        "Paracetamol",
+        "Paracetamol 500mg",
+        "Omeprazole 20mg",
+        "Metformin",
+        "Ibuprofen"
+      ],
+      "selected_medicine": "Paracetamol",
+      "weights_before": {
+        "semantic": 0.2291095890410959,
+        "tfidf": 0.23321917808219178,
+        "knowledge": 0.23732876712328768,
+        "collaborative": 0.30034246575342466
+      },
+      "weights_after": {
+        "semantic": 0.22048434442270062,
+        "tfidf": 0.2241829745596869,
+        "knowledge": 0.25645303326810176,
+        "collaborative": 0.29887964774951076
+      },
+      "weight_changes": {
+        "semantic": -0.008625244618395284,
+        "tfidf": -0.009036203522504893,
+        "knowledge": 0.01912426614481408,
+        "collaborative": -0.0014628180039139016
+      },
+      "learning_count": 2
+    },
+    {
+      "id": 3,
+      "timestamp": "2025-12-27T04:22:13.476871",
+      "symptoms": " What to do if your leg breaks? Like there is no leg there?",
+      "recommended_medicines": [
+        "Paracetamol",
+        "Metformin",
+        "Allopurinol 300mg",
+        "Loperamide 2mg",
+        "Clotrimazole Cream"
+      ],
+      "selected_medicine": "Paracetamol",
+      "weights_before": {
+        "semantic": 0.22048434442270062,
+        "tfidf": 0.2241829745596869,
+        "knowledge": 0.25645303326810176,
+        "collaborative": 0.29887964774951076
+      },
+      "weights_after": {
+        "semantic": 0.22048434442270062,
+        "tfidf": 0.2241829745596869,
+        "knowledge": 0.25645303326810176,
+        "collaborative": 0.29887964774951076
+      },
+      "weight_changes": {
+        "semantic": 0.0,
+        "tfidf": 0.0,
+        "knowledge": 0.0,
+        "collaborative": 0.0
+      },
+      "learning_count": 1
+    },
+    {
+      "id": 4,
+      "timestamp": "2025-12-27T04:22:13.495886",
+      "symptoms": " What to do if your leg breaks? Like there is no leg there?",
+      "recommended_medicines": [
+        "Paracetamol",
+        "Metformin",
+        "Allopurinol 300mg",
+        "Loperamide 2mg",
+        "Clotrimazole Cream"
+      ],
+      "selected_medicine": "Metformin",
+      "weights_before": {
+        "semantic": 0.22048434442270062,
+        "tfidf": 0.2241829745596869,
+        "knowledge": 0.25645303326810176,
+        "collaborative": 0.29887964774951076
+      },
+      "weights_after": {
+        "semantic": 0.22048434442270062,
+        "tfidf": 0.2241829745596869,
+        "knowledge": 0.25645303326810176,
+        "collaborative": 0.29887964774951076
+      },
+      "weight_changes": {
+        "semantic": 0.0,
+        "tfidf": 0.0,
+        "knowledge": 0.0,
+        "collaborative": 0.0
+      },
+      "learning_count": 2
+    }
+  ],
+  "last_updated": "2025-12-27T04:22:13.495949",
+  "total_events": 4
+}

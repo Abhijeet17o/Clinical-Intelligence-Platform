@@ -298,6 +298,71 @@
             font-weight: 500;
         }
 
+        /* Toast Notification Styles */
+        .toast {
+            background: white;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            min-width: 300px;
+            max-width: 400px;
+            animation: slideIn 0.3s ease-out;
+            border-left: 4px solid #28a745;
+        }
+
+        .toast.success {
+            border-left-color: #28a745;
+        }
+
+        .toast.error {
+            border-left-color: #dc3545;
+        }
+
+        .toast-icon {
+            font-size: 1.5em;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .toast-message {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
         .alert-info {
             background: #d1ecf1;
             color: #0c5460;
@@ -434,62 +499,7 @@
             font-size: 0.85em;
         }
 
-        .fl-panel {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 20px;
-            color: white;
-        }
 
-        .fl-panel h4 {
-            margin: 0 0 10px 0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .fl-metrics {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .fl-metric {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-        }
-
-        .fl-metric-value {
-            font-size: 1.5em;
-            font-weight: bold;
-            color: #00ff88;
-        }
-
-        .fl-metric-label {
-            font-size: 0.75em;
-            color: #a0a0a0;
-        }
-
-        .btn-run-fl {
-            margin-top: 10px;
-            width: 100%;
-            padding: 10px;
-            background: #00ff88;
-            color: #1a1a2e;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .btn-run-fl:hover {
-            transform: translateY(-2px);
-        }
 
         .explain-toggle {
             background: none;
@@ -642,34 +652,6 @@
                         </div>
 
                         <!-- Federated Learning Panel -->
-                        <div class="fl-panel" id="fl-panel">
-                            <h4>🔗 Federated Learning Status</h4>
-                            <p style="font-size: 0.85em; color: #a0a0a0; margin: 0 0 10px 0;">
-                                Privacy-preserving model training across hospitals
-                            </p>
-                            <div class="fl-metrics" id="fl-metrics">
-                                <div class="fl-metric">
-                                    <div class="fl-metric-value" id="fl-rounds">-</div>
-                                    <div class="fl-metric-label">Rounds</div>
-                                </div>
-                                <div class="fl-metric">
-                                    <div class="fl-metric-value" id="fl-clients">-</div>
-                                    <div class="fl-metric-label">Clients</div>
-                                </div>
-                                <div class="fl-metric">
-                                    <div class="fl-metric-value" id="fl-loss">-</div>
-                                    <div class="fl-metric-label">Avg Loss</div>
-                                </div>
-                                <div class="fl-metric">
-                                    <div class="fl-metric-value" id="fl-wer">-</div>
-                                    <div class="fl-metric-label">WER</div>
-                                </div>
-                            </div>
-                            <button class="btn-run-fl" id="btn-run-fl">
-                                🚀 Run FL Simulation
-                            </button>
-                        </div>
-
                         <!-- Manual Medicine Search -->
                         <div>
                             <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
@@ -698,13 +680,156 @@
                                 💾 Save Prescription
                             </button>
                         </div>
+
+                        <!-- Learning Activity Panel -->
+                        <div style="margin-top: 30px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; padding: 20px; color: white;">
+                            <h3 style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                                🧠 Model Learning Activity
+                            </h3>
+                            <div id="learning-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                                    <div style="font-size: 2em; font-weight: bold;" id="learning-today-count">0</div>
+                                    <div style="font-size: 0.9em; opacity: 0.9;">Learned Today</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                                    <div style="font-size: 2em; font-weight: bold;" id="learning-total-count">0</div>
+                                    <div style="font-size: 0.9em; opacity: 0.9;">Total Learned</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; font-size: 0.9em; opacity: 0.9;" id="learning-last-update">
+                                Last learning: Never
+                            </div>
+                            <div style="margin-top: 10px; max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; font-size: 0.85em;" id="learning-log">
+                                <div style="opacity: 0.8;">Learning log will appear here...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Toast Notification Container -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
     <script>
+        // Toast Notification Functions (defined early so they're available)
+        function showToast(type, title, message) {
+            const container = document.getElementById('toast-container');
+            if (!container) {
+                console.warn('Toast container not found');
+                alert(`${title}: ${message}`); // Fallback to alert
+                return;
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'success' ? '✅' : '❌';
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-content">
+                    <div class="toast-title">${title}</div>
+                    <div class="toast-message">${message}</div>
+                </div>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 5000);
+        }
+
+        // Learning Panel Functions (defined early)
+        function updateLearningPanel(learningResult) {
+            // Update counts (will be refreshed from API)
+            loadLearningStats();
+        }
+
+        function addToLearningLog(medicine, learningResult) {
+            const logContainer = document.getElementById('learning-log');
+            if (!logContainer) return;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '8px';
+            logEntry.style.padding = '8px';
+            logEntry.style.background = 'rgba(255,255,255,0.1)';
+            logEntry.style.borderRadius = '6px';
+            logEntry.innerHTML = `
+                <div style="font-weight: bold;">${timestamp} - Learned: ${medicine}</div>
+                <div style="font-size: 0.85em; opacity: 0.9; margin-top: 4px;">
+                    Weights updated (Learning #${learningResult.learning_count || 0})
+                </div>
+            `;
+            
+            // Remove placeholder if exists
+            const placeholder = logContainer.querySelector('div[style*="opacity: 0.8"]');
+            if (placeholder) {
+                placeholder.remove();
+            }
+            
+            // Add to top
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+            
+            // Keep only last 5 entries
+            while (logContainer.children.length > 5) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        async function loadLearningStats() {
+            try {
+                const response = await fetch('/api/fl/learning-stats');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const stats = result.stats;
+                    
+                    // Update counts
+                    const todayCountEl = document.getElementById('learning-today-count');
+                    const totalCountEl = document.getElementById('learning-total-count');
+                    const lastUpdateEl = document.getElementById('learning-last-update');
+                    
+                    if (todayCountEl) todayCountEl.textContent = stats.today_count || 0;
+                    if (totalCountEl) totalCountEl.textContent = stats.total_learnings || 0;
+                    
+                    // Update last learning time
+                    if (lastUpdateEl) {
+                        if (stats.last_learning) {
+                            const lastDate = new Date(stats.last_learning);
+                            const timeAgo = getTimeAgo(lastDate);
+                            lastUpdateEl.textContent = `Last learning: ${timeAgo}`;
+                        } else {
+                            lastUpdateEl.textContent = 'Last learning: Never';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading learning stats:', error);
+            }
+        }
+
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return `${seconds} seconds ago`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} minutes ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} hours ago`;
+            const days = Math.floor(hours / 24);
+            return `${days} days ago`;
+        }
+
         // Track current consultation ID (set when consultation is processed)
         let currentConsultationId = null;
 
@@ -858,7 +983,28 @@
                     const result = await response.json();
 
                     if (result.success) {
-                        alert('✅ Prescription saved successfully!');
+                        // Show success message
+                        showToast('success', 'Prescription Saved', 'Prescription saved successfully!');
+                        
+                        // Handle learning feedback
+                        if (result.learning && result.learning.success) {
+                            const learning = result.learning;
+                            const selectedMed = prescriptionText.split('\n')[0] || 'medicine';
+                            
+                            // Show learning notification
+                            showToast(
+                                'success',
+                                '🧠 Model Learned!',
+                                `Model learned from: ${selectedMed}. Weights updated.`
+                            );
+                            
+                            // Update learning panel
+                            updateLearningPanel(learning);
+                            
+                            // Add to learning log
+                            addToLearningLog(selectedMed, learning);
+                        }
+                        
                         console.log('Prescription saved and linked to consultation:', currentConsultationId);
 
                         // Clear prescription text area
@@ -870,6 +1016,9 @@
 
                         // Clear consultation ID after saving
                         currentConsultationId = null;
+
+                        // Refresh learning stats
+                        loadLearningStats();
 
                     } else {
                         throw new Error(result.error || 'Failed to save prescription');
@@ -1510,38 +1659,10 @@ ${consultation.transcript_text || 'No transcript available'}
             }
         }, 100); // Small delay to not block page load
 
-        // FL Simulation
-        document.getElementById('btn-run-fl').addEventListener('click', async function () {
-            const btn = this;
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Running...';
-
-            try {
-                const response = await fetch('/api/fl/simulate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ num_rounds: 3, num_clients: 3 })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('fl-rounds').textContent = data.results.total_rounds;
-                    document.getElementById('fl-clients').textContent = data.results.num_clients;
-                    document.getElementById('fl-loss').textContent = data.results.final_metrics.avg_loss.toFixed(3);
-                    document.getElementById('fl-wer').textContent = data.results.final_metrics.avg_wer.toFixed(3);
-                    console.log('FL simulation complete:', data.results);
-                } else {
-                    alert('FL simulation failed: ' + data.error);
-                }
-            } catch (error) {
-                console.error('FL simulation error:', error);
-                alert('FL simulation error: ' + error.message);
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '🚀 Run FL Simulation';
-            }
-        });
+        // Load learning stats on page load (functions already defined above)
+        loadLearningStats();
+        // Refresh every 30 seconds
+        setInterval(loadLearningStats, 30000);
     </script>
 </body>
 

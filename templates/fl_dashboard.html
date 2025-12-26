@@ -1,0 +1,1202 @@
+{% extends "base.html" %}
+
+{% block title %}Federated Learning Dashboard{% endblock %}
+
+{% block content %}
+<div class="fl-dashboard">
+    <div class="dashboard-header">
+        <h1>🤖 Federated Learning Dashboard</h1>
+        <p class="subtitle">Real-time Hybrid Recommender Training Across Multiple Clients</p>
+        <div style="margin-top: 20px;">
+            <a href="/" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">
+                ← Back to Main Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Incremental Learning Overview -->
+    <div class="card control-panel">
+        <h3>🧠 Incremental Learning Status</h3>
+        <div class="learning-overview">
+            <div class="learning-stats-grid">
+                <div class="learning-stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-value" id="totalLearnings">0</div>
+                    <div class="stat-label">Total Prescriptions Learned</div>
+                </div>
+                <div class="learning-stat-card">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-value" id="todayLearnings">0</div>
+                    <div class="stat-label">Learned Today</div>
+                </div>
+                <div class="learning-stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value" id="learningRate">0</div>
+                    <div class="stat-label">Learning Rate (per hour)</div>
+                </div>
+                <div class="learning-stat-card">
+                    <div class="stat-icon">🕐</div>
+                    <div class="stat-value" id="lastLearning">Never</div>
+                    <div class="stat-label">Last Learning</div>
+                </div>
+            </div>
+            <div style="margin-top: 20px;">
+                <button id="refreshLearningStats" class="btn btn-secondary" onclick="refreshLearningStats()">
+                    🔄 Refresh Learning Stats
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Optional: Manual Training (Hidden by default, can be enabled for initial training) -->
+    <div class="card control-panel" id="manualTrainingPanel" style="display: none;">
+        <h3>⚙️ Manual Training Control (Optional)</h3>
+        <p style="color: #666; margin-bottom: 15px;">Use this for initial batch training. Incremental learning happens automatically.</p>
+        <div class="control-buttons">
+            <button id="startTraining" class="btn btn-primary" onclick="startTraining()">
+                ▶️ Start Batch Training
+            </button>
+            <button id="stopTraining" class="btn btn-danger" onclick="stopTraining()" disabled>
+                ⏹️ Stop Training
+            </button>
+            <button id="refreshStatus" class="btn btn-secondary" onclick="refreshStatus()">
+                🔄 Refresh Status
+            </button>
+        </div>
+    </div>
+
+    <!-- Status Overview -->
+    <div class="status-overview">
+        <div class="card status-card">
+            <h3>📊 Training Status</h3>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-label">Status</div>
+                    <div class="status-value" id="trainingStatus">Idle</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Current Round</div>
+                    <div class="status-value" id="currentRound">0 / 0">0 / 0</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Progress</div>
+                    <div class="status-value">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                        </div>
+                        <span id="progressText">0%</span>
+                    </div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Active Clients</div>
+                    <div class="status-value" id="activeClients">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card metrics-card">
+            <h3>📈 Current Metrics</h3>
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <div class="metric-label">Average Loss</div>
+                    <div class="metric-value" id="avgLoss">--</div>
+                    <div class="metric-trend" id="lossTrend"></div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Accuracy</div>
+                    <div class="metric-value" id="avgAccuracy">--</div>
+                    <div class="metric-trend" id="accuracyTrend"></div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Precision</div>
+                    <div class="metric-value" id="avgPrecision">--</div>
+                    <div class="metric-trend" id="precisionTrend"></div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Training Time</div>
+                    <div class="metric-value" id="trainingTime">--</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Total Samples</div>
+                    <div class="metric-value" id="totalSamples">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-container">
+        <div class="card chart-card">
+            <h3>📉 Loss Over Rounds</h3>
+            <canvas id="lossChart"></canvas>
+        </div>
+        <div class="card chart-card">
+            <h3>📊 Accuracy Over Rounds</h3>
+            <canvas id="accuracyChart"></canvas>
+        </div>
+        <div class="card chart-card">
+            <h3>📈 Precision Over Rounds</h3>
+            <canvas id="precisionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Client Status -->
+    <div class="card clients-card">
+        <h3>👥 Client Status</h3>
+        <div id="clientsList" class="clients-list">
+            <p class="no-data">No clients registered yet</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions Panel -->
+    <div class="card control-panel">
+        <h3>⚡ Quick Actions</h3>
+        <div class="action-buttons-grid">
+            <button class="btn btn-primary" onclick="viewFullLearningHistory()">
+                📚 View Full Learning History
+            </button>
+            <button class="btn btn-primary" onclick="viewWeightEvolution()">
+                📈 View Weight Evolution
+            </button>
+            <button class="btn btn-primary" onclick="viewMedicinePatterns()">
+                🔍 View Medicine Patterns
+            </button>
+            <button class="btn btn-secondary" onclick="exportLearningData()">
+                💾 Export Learning Data
+            </button>
+            <button class="btn btn-secondary" onclick="clearLearningHistory()">
+                🗑️ Clear Learning History
+            </button>
+            <button class="btn btn-info" onclick="showLearningHelp()">
+                ❓ Learning Help
+            </button>
+        </div>
+    </div>
+
+    <!-- Learning Events Log -->
+    <div class="card log-card">
+        <h3>📝 Recent Learning Events</h3>
+        <div id="learningEventsLog" class="log-container">
+            <p class="log-entry">Loading learning events...</p>
+        </div>
+    </div>
+
+    <!-- Training Log (for manual training) -->
+    <div class="card log-card" id="trainingLogCard" style="display: none;">
+        <h3>📝 Training Log</h3>
+        <div id="trainingLog" class="log-container">
+            <p class="log-entry">System ready. Waiting for training to start...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<style>
+.fl-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.dashboard-header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    color: #2c3e50;
+}
+
+.subtitle {
+    color: #7f8c8d;
+    font-size: 1.1em;
+}
+
+.control-panel {
+    margin-bottom: 20px;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.training-config {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.config-item label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #555;
+}
+
+.config-item input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.status-overview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.status-grid, .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.status-item, .metric-item {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.status-label, .metric-label {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.status-value, .metric-value {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    transition: width 0.3s ease;
+}
+
+.metric-trend {
+    font-size: 0.8em;
+    color: #27ae60;
+    margin-top: 5px;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.chart-card {
+    min-height: 300px;
+}
+
+.chart-card canvas {
+    max-height: 250px;
+}
+
+.clients-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.client-card {
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.learning-overview {
+    padding: 10px 0;
+}
+
+.learning-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.learning-stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.stat-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.stat-value {
+    font-size: 2em;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.client-card.active {
+    border-left-color: #2ecc71;
+}
+
+.client-card.failed {
+    border-left-color: #e74c3c;
+}
+
+.client-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.client-id {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.client-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+}
+
+.client-status.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.client-status.training {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.client-status.failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.client-info {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.log-container {
+    max-height: 300px;
+    overflow-y: auto;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.log-entry {
+    margin: 5px 0;
+    padding: 5px;
+    border-left: 3px solid #3498db;
+    padding-left: 10px;
+}
+
+.log-entry.success {
+    border-left-color: #2ecc71;
+}
+
+.log-entry.error {
+    border-left-color: #e74c3c;
+}
+
+.log-entry.warning {
+    border-left-color: #f39c12;
+}
+
+.no-data {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+}
+
+.action-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+}
+
+@media (max-width: 768px) {
+    .status-overview, .charts-container {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Chart instances
+let lossChart = null;
+let accuracyChart = null;
+let precisionChart = null;
+
+// Initialize charts
+function initCharts() {
+    const lossCtx = document.getElementById('lossChart').getContext('2d');
+    const accuracyCtx = document.getElementById('accuracyChart').getContext('2d');
+    const precisionCtx = document.getElementById('precisionChart').getContext('2d');
+
+    lossChart = new Chart(lossCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Average Loss',
+                data: [],
+                borderColor: 'rgb(231, 76, 60)',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Loss'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Round'
+                    }
+                }
+            }
+        }
+    });
+
+    accuracyChart = new Chart(accuracyCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Accuracy',
+                data: [],
+                borderColor: 'rgb(46, 204, 113)',
+                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 1.0,
+                    title: {
+                        display: true,
+                        text: 'Accuracy'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Round'
+                    }
+                }
+            }
+        }
+    });
+
+    precisionChart = new Chart(precisionCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Precision',
+                data: [],
+                borderColor: 'rgb(155, 89, 182)',
+                backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 1.0,
+                    title: {
+                        display: true,
+                        text: 'Precision'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Round'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Start training
+async function startTraining() {
+    const config = {
+        mode: 'real',
+        num_rounds: parseInt(document.getElementById('numRounds').value),
+        num_clients: parseInt(document.getElementById('numClients').value),
+        local_epochs: parseInt(document.getElementById('localEpochs').value),
+        learning_rate: parseFloat(document.getElementById('learningRate').value)
+    };
+
+    addLog('Starting federated learning training...', 'info');
+    
+    document.getElementById('startTraining').disabled = true;
+    document.getElementById('stopTraining').disabled = false;
+    document.getElementById('trainingStatus').textContent = 'Training';
+    document.getElementById('trainingStatus').style.color = '#2ecc71';
+
+    try {
+        const response = await fetch('/api/fl/simulate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            addLog('Training started successfully!', 'success');
+            // Start polling for updates
+            startPolling();
+        } else {
+            addLog('Error starting training: ' + data.error, 'error');
+            resetTrainingState();
+        }
+    } catch (error) {
+        addLog('Error: ' + error.message, 'error');
+        resetTrainingState();
+    }
+}
+
+// Stop training
+function stopTraining() {
+    addLog('Stopping training...', 'warning');
+    resetTrainingState();
+    stopPolling();
+}
+
+// Reset training state
+function resetTrainingState() {
+    document.getElementById('startTraining').disabled = false;
+    document.getElementById('stopTraining').disabled = true;
+    document.getElementById('trainingStatus').textContent = 'Idle';
+    document.getElementById('trainingStatus').style.color = '#7f8c8d';
+}
+
+// Refresh status
+// Learning Stats Functions
+async function refreshLearningStats() {
+    try {
+        const response = await fetch('/api/fl/learning-stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            const stats = data.stats;
+            
+            // Update stat cards
+            document.getElementById('totalLearnings').textContent = stats.total_learnings || 0;
+            document.getElementById('todayLearnings').textContent = stats.today_count || 0;
+            document.getElementById('learningRate').textContent = stats.learning_rate_per_hour || 0;
+            
+            // Update last learning time
+            const lastLearningEl = document.getElementById('lastLearning');
+            if (stats.last_learning) {
+                const lastDate = new Date(stats.last_learning);
+                const timeAgo = getTimeAgo(lastDate);
+                lastLearningEl.textContent = timeAgo;
+            } else {
+                lastLearningEl.textContent = 'Never';
+            }
+            
+            // Update learning events log
+            updateLearningEventsLog(data.recent_events || []);
+            
+            // Update weight evolution chart if we have data
+            if (data.weight_evolution && data.weight_evolution.length > 0) {
+                updateWeightEvolutionChart(data.weight_evolution);
+            }
+        }
+    } catch (error) {
+        console.error('Error refreshing learning stats:', error);
+    }
+}
+
+function updateLearningEventsLog(events) {
+    const logContainer = document.getElementById('learningEventsLog');
+    
+    if (!events || events.length === 0) {
+        logContainer.innerHTML = '<p class="log-entry">No learning events yet. Save a prescription to start learning!</p>';
+        return;
+    }
+    
+    let html = '';
+    events.reverse().forEach(event => {
+        const date = new Date(event.timestamp);
+        const timeStr = date.toLocaleString();
+        const selectedMed = event.selected_medicine || 'Unknown';
+        const symptoms = event.symptoms ? (event.symptoms.substring(0, 50) + '...') : 'N/A';
+        
+        html += `
+            <div class="log-entry success">
+                <strong>${timeStr}</strong> - Learned from: <strong>${selectedMed}</strong><br>
+                <small style="color: #666;">Symptoms: ${symptoms}</small><br>
+                <small style="color: #666;">Learning #${event.learning_count || event.id || 'N/A'}</small>
+            </div>
+        `;
+    });
+    
+    logContainer.innerHTML = html;
+}
+
+function updateWeightEvolutionChart(weightEvolution) {
+    // Extract data for chart
+    const labels = weightEvolution.map(w => {
+        const date = new Date(w.timestamp);
+        return date.toLocaleTimeString();
+    });
+    
+    // Get unique model names
+    const modelNames = new Set();
+    weightEvolution.forEach(w => {
+        Object.keys(w.weights || {}).forEach(name => modelNames.add(name));
+    });
+    
+    // Create datasets for each model
+    const datasets = Array.from(modelNames).map((modelName, index) => {
+        const colors = ['rgb(102, 126, 234)', 'rgb(46, 204, 113)', 'rgb(231, 76, 60)', 'rgb(241, 196, 15)'];
+        return {
+            label: modelName,
+            data: weightEvolution.map(w => w.weights[modelName] || 0),
+            borderColor: colors[index % colors.length],
+            backgroundColor: colors[index % colors.length].replace('rgb', 'rgba').replace(')', ', 0.1)'),
+            tension: 0.4,
+            fill: false
+        };
+    });
+    
+    // Update or create chart
+    if (lossChart) {
+        lossChart.data.labels = labels;
+        lossChart.data.datasets = datasets;
+        lossChart.update();
+    }
+}
+
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+}
+
+// Quick Action Functions
+async function viewFullLearningHistory() {
+    try {
+        const response = await fetch('/api/fl/learning-history?limit=100');
+        const data = await response.json();
+        
+        if (data.success) {
+            const events = data.events;
+            const modal = createModal('Full Learning History', formatLearningHistory(events));
+            document.body.appendChild(modal);
+        } else {
+            alert('Error loading learning history: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function viewWeightEvolution() {
+    try {
+        const response = await fetch('/api/fl/learning-stats');
+        const data = await response.json();
+        
+        if (data.success && data.weight_evolution) {
+            const modal = createModal('Weight Evolution', formatWeightEvolution(data.weight_evolution));
+            document.body.appendChild(modal);
+        } else {
+            alert('No weight evolution data available yet.');
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function viewMedicinePatterns() {
+    try {
+        const response = await fetch('/api/fl/learning-stats');
+        const data = await response.json();
+        
+        if (data.success && data.medicine_patterns) {
+            const patterns = data.medicine_patterns;
+            const modal = createModal('Medicine Patterns', formatMedicinePatterns(patterns));
+            document.body.appendChild(modal);
+        } else {
+            alert('No medicine patterns available yet.');
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+function exportLearningData() {
+    fetch('/api/fl/learning-history?limit=1000')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const jsonStr = JSON.stringify(data.events, null, 2);
+                const blob = new Blob([jsonStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `learning_history_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                alert('✅ Learning data exported successfully!');
+            }
+        })
+        .catch(error => {
+            alert('Error exporting data: ' + error.message);
+        });
+}
+
+function clearLearningHistory() {
+    if (!confirm('⚠️ Are you sure you want to clear all learning history? This action cannot be undone.')) {
+        return;
+    }
+    
+    if (!confirm('⚠️ This will delete all learning records. Are you absolutely sure?')) {
+        return;
+    }
+    
+    // Note: This would require a backend endpoint to clear history
+    alert('⚠️ Clear history feature requires backend implementation. Contact administrator.');
+}
+
+function showLearningHelp() {
+    const helpContent = `
+        <div style="text-align: left; line-height: 1.8;">
+            <h3 style="color: #667eea; margin-bottom: 15px;">🧠 Incremental Federated Learning</h3>
+            
+            <p><strong>How it works:</strong></p>
+            <ul style="margin-left: 20px; margin-bottom: 20px;">
+                <li>Every time a doctor saves a prescription, the model learns automatically</li>
+                <li>The system updates ensemble weights based on doctor's choices</li>
+                <li>Learning history is saved persistently across server restarts</li>
+                <li>Weight updates are aggregated periodically for federated learning</li>
+            </ul>
+            
+            <p><strong>Key Features:</strong></p>
+            <ul style="margin-left: 20px; margin-bottom: 20px;">
+                <li><strong>Total Learnings:</strong> Total number of prescriptions the model has learned from</li>
+                <li><strong>Learned Today:</strong> Number of prescriptions learned today</li>
+                <li><strong>Learning Rate:</strong> Average learning events per hour</li>
+                <li><strong>Last Learning:</strong> Time since the last learning event</li>
+            </ul>
+            
+            <p><strong>Viewing Data:</strong></p>
+            <ul style="margin-left: 20px;">
+                <li>Click "View Full Learning History" to see all learning events</li>
+                <li>Click "View Weight Evolution" to see how model weights changed over time</li>
+                <li>Click "View Medicine Patterns" to see symptom-to-medicine mappings</li>
+                <li>Click "Export Learning Data" to download learning history as JSON</li>
+            </ul>
+        </div>
+    `;
+    
+    const modal = createModal('Learning Help', helpContent);
+    document.body.appendChild(modal);
+}
+
+function createModal(title, content) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    `;
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        position: relative;
+    `;
+    
+    modal.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #333;">${title}</h2>
+            <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
+                    style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-size: 18px;">×</button>
+        </div>
+        <div>${content}</div>
+    `;
+    
+    overlay.onclick = (e) => {
+        if (e.target === overlay) {
+            overlay.remove();
+        }
+    };
+    
+    overlay.appendChild(modal);
+    return overlay;
+}
+
+function formatLearningHistory(events) {
+    if (!events || events.length === 0) {
+        return '<p>No learning events found.</p>';
+    }
+    
+    let html = `<div style="max-height: 500px; overflow-y: auto;">`;
+    events.reverse().forEach(event => {
+        const date = new Date(event.timestamp);
+        html += `
+            <div style="border-left: 4px solid #667eea; padding: 15px; margin-bottom: 15px; background: #f8f9fa; border-radius: 4px;">
+                <div style="font-weight: bold; color: #333; margin-bottom: 8px;">
+                    ${date.toLocaleString()}
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <strong>Selected Medicine:</strong> ${event.selected_medicine || 'N/A'}
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <strong>Symptoms:</strong> ${(event.symptoms || 'N/A').substring(0, 100)}${(event.symptoms || '').length > 100 ? '...' : ''}
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <strong>Recommended:</strong> ${(event.recommended_medicines || []).slice(0, 5).join(', ')}
+                </div>
+                <div style="font-size: 0.9em; color: #666;">
+                    Learning Event #${event.id || event.learning_count || 'N/A'}
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    return html;
+}
+
+function formatWeightEvolution(evolution) {
+    if (!evolution || evolution.length === 0) {
+        return '<p>No weight evolution data available.</p>';
+    }
+    
+    let html = '<div style="max-height: 500px; overflow-y: auto;">';
+    html += '<table style="width: 100%; border-collapse: collapse;">';
+    html += '<thead><tr style="background: #667eea; color: white;"><th style="padding: 10px; text-align: left;">Timestamp</th>';
+    
+    // Get model names from first entry
+    const modelNames = Object.keys(evolution[0].weights || {});
+    modelNames.forEach(name => {
+        html += `<th style="padding: 10px; text-align: center;">${name}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    
+    evolution.slice(-20).reverse().forEach(w => {
+        const date = new Date(w.timestamp);
+        html += `<tr style="border-bottom: 1px solid #e0e0e0;">`;
+        html += `<td style="padding: 10px;">${date.toLocaleString()}</td>`;
+        modelNames.forEach(name => {
+            const weight = (w.weights[name] || 0).toFixed(3);
+            html += `<td style="padding: 10px; text-align: center;">${weight}</td>`;
+        });
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table></div>';
+    return html;
+}
+
+function formatMedicinePatterns(patterns) {
+    if (!patterns || Object.keys(patterns).length === 0) {
+        return '<p>No medicine patterns available yet.</p>';
+    }
+    
+    let html = '<div style="max-height: 500px; overflow-y: auto;">';
+    Object.entries(patterns).slice(0, 20).forEach(([key, pattern]) => {
+        html += `
+            <div style="border-left: 4px solid #f5576c; padding: 15px; margin-bottom: 15px; background: #f8f9fa; border-radius: 4px;">
+                <div style="font-weight: bold; color: #333; margin-bottom: 8px;">
+                    ${pattern.symptoms || key}
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <strong>Medicines:</strong> ${(pattern.medicines || []).join(', ') || 'N/A'}
+                </div>
+                <div style="font-size: 0.9em; color: #666;">
+                    Learned ${pattern.count || 0} time(s)
+                </div>
+            </div>
+        `;
+    });
+    html += '</div>';
+    return html;
+}
+
+// Load learning stats on page load
+refreshLearningStats();
+// Refresh every 10 seconds
+setInterval(refreshLearningStats, 10000);
+
+async function refreshStatus() {
+    await updateStatus();
+    await updateMetrics();
+    await updateClients();
+}
+
+// Polling for real-time updates
+let pollingInterval = null;
+
+function startPolling() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    
+    pollingInterval = setInterval(async () => {
+        await updateStatus();
+        await updateMetrics();
+        await updateClients();
+    }, 2000); // Poll every 2 seconds
+}
+
+function stopPolling() {
+    if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+    }
+}
+
+// Update status
+async function updateStatus() {
+    try {
+        const response = await fetch('/api/fl/status?mode=real');
+        const data = await response.json();
+        
+        if (data.success && data.server) {
+            const server = data.server;
+            document.getElementById('currentRound').textContent = 
+                `${server.current_round} / ${server.total_rounds}`;
+            
+            const progress = server.progress_percent || 0;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent = progress.toFixed(1) + '%';
+            
+            if (data.clients) {
+                document.getElementById('activeClients').textContent = 
+                    data.clients.active_clients || 0;
+            }
+        }
+    } catch (error) {
+        console.error('Error updating status:', error);
+    }
+}
+
+// Update metrics
+async function updateMetrics() {
+    try {
+        const response = await fetch('/api/fl/metrics');
+        const data = await response.json();
+        
+        if (data.success && data.metrics) {
+            const metrics = data.metrics;
+            
+            // Update current metrics
+            if (metrics.loss_history && metrics.loss_history.length > 0) {
+                const latestLoss = metrics.loss_history[metrics.loss_history.length - 1];
+                document.getElementById('avgLoss').textContent = latestLoss.toFixed(4);
+            }
+            
+            if (metrics.accuracy_history && metrics.accuracy_history.length > 0) {
+                const latestAccuracy = metrics.accuracy_history[metrics.accuracy_history.length - 1];
+                document.getElementById('avgAccuracy').textContent = (latestAccuracy * 100).toFixed(2) + '%';
+            }
+            
+            if (metrics.precision_history && metrics.precision_history.length > 0) {
+                const latestPrecision = metrics.precision_history[metrics.precision_history.length - 1];
+                document.getElementById('avgPrecision').textContent = (latestPrecision * 100).toFixed(2) + '%';
+            }
+            
+            // Update charts
+            if (lossChart && metrics.rounds && metrics.loss_history) {
+                lossChart.data.labels = metrics.rounds.map(r => `Round ${r}`);
+                lossChart.data.datasets[0].data = metrics.loss_history;
+                lossChart.update();
+            }
+            
+            if (accuracyChart && metrics.rounds && metrics.accuracy_history) {
+                accuracyChart.data.labels = metrics.rounds.map(r => `Round ${r}`);
+                accuracyChart.data.datasets[0].data = metrics.accuracy_history;
+                accuracyChart.update();
+            }
+            
+            if (precisionChart && metrics.rounds && metrics.precision_history) {
+                precisionChart.data.labels = metrics.rounds.map(r => `Round ${r}`);
+                precisionChart.data.datasets[0].data = metrics.precision_history;
+                precisionChart.update();
+            }
+        }
+    } catch (error) {
+        console.error('Error updating metrics:', error);
+    }
+}
+
+// Update clients
+async function updateClients() {
+    try {
+        const response = await fetch('/api/fl/status?mode=real');
+        const data = await response.json();
+        
+        if (data.success && data.client_details) {
+            const clientsList = document.getElementById('clientsList');
+            clientsList.innerHTML = '';
+            
+            if (data.client_details.length === 0) {
+                clientsList.innerHTML = '<p class="no-data">No clients registered yet</p>';
+                return;
+            }
+            
+            data.client_details.forEach(client => {
+                const clientCard = document.createElement('div');
+                clientCard.className = `client-card ${client.status}`;
+                
+                const statusClass = client.status === 'registered' || client.status === 'idle' 
+                    ? 'active' 
+                    : client.status === 'failed' ? 'failed' : '';
+                
+                clientCard.innerHTML = `
+                    <div class="client-header">
+                        <span class="client-id">${client.client_id}</span>
+                        <span class="client-status ${client.status}">${client.status}</span>
+                    </div>
+                    <div class="client-info">
+                        <div>Data Size: ${client.data_size} samples</div>
+                        <div>Last Heartbeat: ${client.last_heartbeat ? new Date(client.last_heartbeat).toLocaleTimeString() : 'Never'}</div>
+                    </div>
+                `;
+                
+                clientsList.appendChild(clientCard);
+            });
+        }
+    } catch (error) {
+        console.error('Error updating clients:', error);
+    }
+}
+
+// Add log entry
+function addLog(message, type = 'info') {
+    const logContainer = document.getElementById('trainingLog');
+    const logEntry = document.createElement('p');
+    logEntry.className = `log-entry ${type}`;
+    
+    const timestamp = new Date().toLocaleTimeString();
+    logEntry.textContent = `[${timestamp}] ${message}`;
+    
+    logContainer.insertBefore(logEntry, logContainer.firstChild);
+    
+    // Keep only last 50 entries
+    while (logContainer.children.length > 50) {
+        logContainer.removeChild(logContainer.lastChild);
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    initCharts();
+    refreshStatus();
+    
+    // Auto-refresh every 5 seconds when not training
+    setInterval(() => {
+        if (!pollingInterval) {
+            refreshStatus();
+        }
+    }, 5000);
+});
+</script>
+{% endblock %}
+

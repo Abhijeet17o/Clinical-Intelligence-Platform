@@ -1,0 +1,49 @@
+{
+  "total_learnings": 4,
+  "today_count": 4,
+  "last_learning": "2025-12-27T04:22:13.495886",
+  "weight_evolution": {
+    "2025-12-27T04:09:07.443775": {
+      "semantic": 0.2291095890410959,
+      "tfidf": 0.23321917808219178,
+      "knowledge": 0.23732876712328768,
+      "collaborative": 0.30034246575342466
+    },
+    "2025-12-27T04:09:07.501952": {
+      "semantic": 0.22048434442270062,
+      "tfidf": 0.2241829745596869,
+      "knowledge": 0.25645303326810176,
+      "collaborative": 0.29887964774951076
+    },
+    "2025-12-27T04:22:13.476871": {
+      "semantic": 0.22048434442270062,
+      "tfidf": 0.2241829745596869,
+      "knowledge": 0.25645303326810176,
+      "collaborative": 0.29887964774951076
+    },
+    "2025-12-27T04:22:13.495886": {
+      "semantic": 0.22048434442270062,
+      "tfidf": 0.2241829745596869,
+      "knowledge": 0.25645303326810176,
+      "collaborative": 0.29887964774951076
+    }
+  },
+  "medicine_patterns": {
+    " oh my stomach hurts, what should i do? along with": {
+      "symptoms": " Oh my stomach hurts, what should I do? Along with that there is a headache.",
+      "medicines": [
+        "Ibuprofen",
+        "Paracetamol"
+      ],
+      "count": 2
+    },
+    " what to do if your leg breaks? like there is no l": {
+      "symptoms": " What to do if your leg breaks? Like there is no leg there?",
+      "medicines": [
+        "Paracetamol",
+        "Metformin"
+      ],
+      "count": 2
+    }
+  }
+}

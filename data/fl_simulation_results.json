@@ -1,20 +1,40 @@
 {
   "simulation_complete": true,
-  "timestamp": "2025-12-27T02:28:11.029695",
-  "duration_seconds": 0.022654,
+  "timestamp": "2025-12-27T02:55:34.959165",
+  "duration_seconds": 0.013582,
   "config": {
     "num_rounds": 3,
     "min_clients": 2,
     "fraction_fit": 0.5,
+    "server_address": "0.0.0.0:8080",
     "local_epochs": 1,
     "batch_size": 32,
     "learning_rate": 0.001,
+    "max_grad_norm": 1.0,
     "whisper_model": "base",
     "freeze_encoder": true,
-    "num_simulated_clients": 3,
+    "checkpoint_dir": "data/fl_checkpoints",
+    "data_dir": "data/sessions",
     "data_split": "iid",
+    "data_seed": null,
+    "deployment_mode": "hybrid",
+    "num_simulated_clients": 3,
+    "use_simulation": true,
+    "fraction_evaluate": 0.5,
+    "min_evaluate_clients": 2,
+    "min_available_clients": 2,
+    "heartbeat_timeout": 60,
+    "max_client_failures": 3,
+    "enable_auth": false,
+    "auth_token": null,
+    "enable_encryption": false,
+    "ssl_cert_path": null,
     "verbose": false,
-    "log_interval": 1
+    "log_interval": 1,
+    "results_file": "data/fl_results.json",
+    "save_checkpoints": true,
+    "device": "auto",
+    "metadata": {}
   },
   "num_clients": 3,
   "total_rounds": 3,
@@ -23,25 +43,25 @@
       "round": 1,
       "num_clients": 2,
       "participating_clients": [
-        "Hospital_B",
-        "Hospital_C"
+        "Hospital_C",
+        "Hospital_B"
       ],
-      "avg_loss": 0.1411,
-      "avg_wer": 0.148,
-      "duration_ms": 5.345,
+      "avg_loss": 0.4262,
+      "avg_wer": 0.1776,
+      "duration_ms": 4.161,
       "client_metrics": [
         {
-          "client_id": "Hospital_B",
-          "loss": 0.1115,
-          "wer": 0.1919,
-          "samples_used": 59,
+          "client_id": "Hospital_C",
+          "loss": 0.4054,
+          "wer": 0.2241,
+          "samples_used": 199,
           "epochs": 1
         },
         {
-          "client_id": "Hospital_C",
-          "loss": 0.1707,
-          "wer": 0.1042,
-          "samples_used": 128,
+          "client_id": "Hospital_B",
+          "loss": 0.447,
+          "wer": 0.1311,
+          "samples_used": 87,
           "epochs": 1
         }
       ]
@@ -50,25 +70,25 @@
       "round": 2,
       "num_clients": 2,
       "participating_clients": [
-        "Hospital_C",
+        "Hospital_B",
         "Hospital_A"
       ],
-      "avg_loss": 0.219,
-      "avg_wer": 0.2181,
-      "duration_ms": 4.423,
+      "avg_loss": 0.1744,
+      "avg_wer": 0.1369,
+      "duration_ms": 3.303,
       "client_metrics": [
         {
-          "client_id": "Hospital_C",
-          "loss": 0.1402,
-          "wer": 0.1795,
-          "samples_used": 128,
+          "client_id": "Hospital_B",
+          "loss": 0.1338,
+          "wer": 0.1445,
+          "samples_used": 87,
           "epochs": 1
         },
         {
           "client_id": "Hospital_A",
-          "loss": 0.2978,
-          "wer": 0.2567,
-          "samples_used": 174,
+          "loss": 0.2151,
+          "wer": 0.1294,
+          "samples_used": 147,
           "epochs": 1
         }
       ]
@@ -78,32 +98,32 @@
       "num_clients": 2,
       "participating_clients": [
         "Hospital_B",
-        "Hospital_C"
+        "Hospital_A"
       ],
-      "avg_loss": 0.2794,
-      "avg_wer": 0.2838,
-      "duration_ms": 10.404,
+      "avg_loss": 0.2524,
+      "avg_wer": 0.1926,
+      "duration_ms": 4.515,
       "client_metrics": [
         {
           "client_id": "Hospital_B",
-          "loss": 0.2857,
-          "wer": 0.2973,
-          "samples_used": 59,
+          "loss": 0.321,
+          "wer": 0.1685,
+          "samples_used": 87,
           "epochs": 1
         },
         {
-          "client_id": "Hospital_C",
-          "loss": 0.273,
-          "wer": 0.2703,
-          "samples_used": 128,
+          "client_id": "Hospital_A",
+          "loss": 0.1837,
+          "wer": 0.2167,
+          "samples_used": 147,
           "epochs": 1
         }
       ]
     }
   ],
   "final_metrics": {
-    "avg_loss": 0.2132,
-    "avg_wer": 0.2166,
-    "loss_improvement": -0.1383
+    "avg_loss": 0.2843,
+    "avg_wer": 0.169,
+    "loss_improvement": 0.1738
   }
 }

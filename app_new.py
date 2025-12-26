@@ -64,6 +64,31 @@ def get_recommendation_module():
 _ensemble_recommender = None
 _xai_engine = None
 _fl_simulator = None
+_fl_server_manager = None
+_fl_client_manager = None
+_incremental_learner = None
+_learning_history = None
+
+# Consultation context cache: stores symptoms and recommendations per patient
+# Format: {patient_id: {'symptoms': str, 'recommendations': List[str], 'timestamp': datetime}}
+_consultation_context = {}
+
+# Auto aggregator for federated weight updates
+_auto_aggregator = None
+
+def get_auto_aggregator():
+    """Lazy load auto aggregator"""
+    global _auto_aggregator
+    if _auto_aggregator is None:
+        from modules.federated.auto_aggregator import AutoAggregator
+        _auto_aggregator = AutoAggregator(
+            aggregation_interval=300,  # 5 minutes
+            min_updates_before_aggregate=5,
+            enabled=True
+        )
+        # Start the aggregator
+        _auto_aggregator.start()
+    return _auto_aggregator
 
 def get_ensemble_recommender():
     """Lazy load ensemble recommendation engine with hybrid models"""
@@ -88,6 +113,47 @@ def get_fl_simulator():
         from modules.federated import FederatedSimulator
         _fl_simulator = FederatedSimulator()
     return _fl_simulator
+
+def get_fl_server_manager():
+    """Lazy load FL server manager for recommender"""
+    global _fl_server_manager
+    if _fl_server_manager is None:
+        from modules.federated.recommender_flower_server import RecommenderFLServerManager
+        from modules.federated.fl_config import FLConfig
+        config = FLConfig()
+        _fl_server_manager = RecommenderFLServerManager(config=config)
+    return _fl_server_manager
+
+def get_fl_client_manager():
+    """Lazy load FL client manager"""
+    global _fl_client_manager
+    if _fl_client_manager is None:
+        from modules.federated.client_manager import ClientManager
+        from modules.federated.fl_config import FLConfig
+        config = FLConfig()
+        _fl_client_manager = ClientManager(
+            deployment_mode=config.deployment_mode,
+            heartbeat_timeout=config.heartbeat_timeout,
+            max_failures=config.max_client_failures
+        )
+    return _fl_client_manager
+
+def get_incremental_learner():
+    """Lazy load incremental learner"""
+    global _incremental_learner
+    if _incremental_learner is None:
+        from modules.federated.incremental_learner import IncrementalLearner
+        ensemble = get_ensemble_recommender()
+        _incremental_learner = IncrementalLearner(ensemble=ensemble, learning_rate=0.1)
+    return _incremental_learner
+
+def get_learning_history():
+    """Lazy load learning history manager"""
+    global _learning_history
+    if _learning_history is None:
+        from modules.federated.learning_history import LearningHistory
+        _learning_history = LearningHistory()
+    return _learning_history
 
 # Initialize Flask application
 app = Flask(__name__)
@@ -116,9 +182,10 @@ print("="*70)
 print("\nStarting Flask server...")
 print(f"\n📍 Access the application at: http://127.0.0.1:5000")
 print("\nAvailable routes:")
-print("  • Patient Dashboard:  http://127.0.0.1:5000/")
-print("  • Add New Patient:    http://127.0.0.1:5000/new_patient")
-print("  • Pharmacy Manager:   http://127.0.0.1:5000/pharmacy")
+print("  • Patient Dashboard:      http://127.0.0.1:5000/")
+print("  • Add New Patient:         http://127.0.0.1:5000/new_patient")
+print("  • Pharmacy Manager:        http://127.0.0.1:5000/pharmacy")
+print("  • Federated Learning:       http://127.0.0.1:5000/fl_dashboard")
 print("\n" + "="*70 + "\n")
 
 
@@ -322,6 +389,14 @@ def process_consultation_v2(patient_id):
                     'stock_level': rec.get('stock_level', 0)
                 })
             
+            # Store consultation context for later learning
+            recommended_med_names = [rec['name'] for rec in formatted_recs]
+            _consultation_context[patient_id] = {
+                'symptoms': symptoms_text,
+                'recommendations': recommended_med_names,
+                'timestamp': datetime.now()
+            }
+            
             return jsonify({
                 'success': True,
                 'debug_marker': 'V2_ROUTE_ACTIVE',
@@ -437,11 +512,94 @@ def save_prescription(patient_id):
         
         if success:
             logger.info(f"Prescription saved successfully for patient: {patient_id}")
-            return jsonify({
+            
+            # === INCREMENTAL FEDERATED LEARNING ===
+            learning_result = None
+            try:
+                # Get consultation context (symptoms and recommendations)
+                consultation_ctx = _consultation_context.get(patient_id)
+                
+                if consultation_ctx:
+                    symptoms = consultation_ctx.get('symptoms', '')
+                    recommended_medicines = consultation_ctx.get('recommendations', [])
+                    selected_medicines = prescription_entry['medicines']
+                    
+                    # Get incremental learner and learning history
+                    learner = get_incremental_learner()
+                    history = get_learning_history()
+                    ensemble = get_ensemble_recommender()
+                    all_medicines = db.get_all_medicines()
+                    
+                    # Learn from each selected medicine
+                    for selected_med in selected_medicines:
+                        if selected_med:  # Skip empty strings
+                            # Trigger learning
+                            learning_result = learner.learn_from_prescription(
+                                symptoms=symptoms,
+                                recommended_medicines=recommended_medicines,
+                                selected_medicine=selected_med,
+                                all_medicines=all_medicines
+                            )
+                            
+                            if learning_result.get('success'):
+                                # Save to learning history
+                                history.add_learning_event(
+                                    symptoms=symptoms,
+                                    recommended_medicines=recommended_medicines,
+                                    selected_medicine=selected_med,
+                                    learning_result=learning_result
+                                )
+                                
+                                # Add to auto aggregator for federated aggregation
+                                try:
+                                    aggregator = get_auto_aggregator()
+                                    new_weights = learning_result.get('weights_after', {})
+                                    aggregator.add_local_update(
+                                        weights=new_weights,
+                                        metadata={
+                                            'medicine': selected_med,
+                                            'symptoms': symptoms[:100]
+                                        }
+                                    )
+                                except Exception as e:
+                                    logger.warning(f"Error adding to aggregator: {e}")
+                                
+                                logger.info(
+                                    f"✅ Model learned from prescription: "
+                                    f"{selected_med} for symptoms: {symptoms[:50]}..."
+                                )
+                    
+                    # Clear consultation context after learning
+                    if patient_id in _consultation_context:
+                        del _consultation_context[patient_id]
+                
+                else:
+                    logger.warning(
+                        f"No consultation context found for patient {patient_id}. "
+                        f"Learning skipped. Make sure consultation was processed first."
+                    )
+            
+            except Exception as e:
+                logger.error(f"Error in incremental learning: {e}", exc_info=True)
+                # Don't fail prescription save if learning fails
+                learning_result = {'success': False, 'error': str(e)}
+            
+            # Return response with learning info
+            response_data = {
                 'success': True,
                 'message': 'Prescription saved successfully',
                 'prescription_count': len(ehr_data['prescriptions'])
-            })
+            }
+            
+            if learning_result:
+                response_data['learning'] = {
+                    'success': learning_result.get('success', False),
+                    'weights_after': learning_result.get('weights_after', {}),
+                    'weight_changes': learning_result.get('weight_changes', {}),
+                    'learning_count': learning_result.get('learning_count', 0)
+                }
+            
+            return jsonify(response_data)
         else:
             raise Exception("Failed to update patient EHR")
         
@@ -906,72 +1064,340 @@ def submit_prescription_feedback():
 @app.route('/api/fl/status', methods=['GET'])
 def get_fl_status():
     """
-    Get Federated Learning Status
+    Get Federated Learning Status (Real Implementation Only)
     
-    Returns metrics from the most recent FL simulation.
+    Returns metrics from the most recent FL run.
+    Only real FL mode is supported.
     """
     try:
-        fl_sim = get_fl_simulator()
+        # Real FL mode only
+        server_manager = get_fl_server_manager()
+        client_manager = get_fl_client_manager()
+        
+        server_status = server_manager.get_status()
+        client_summary = client_manager.get_summary()
         
         return jsonify({
             'success': True,
-            'metrics': fl_sim.get_metrics_summary(),
-            'clients': fl_sim.get_client_details()
+            'mode': 'real',
+            'server': server_status,
+            'clients': client_summary,
+            'client_details': client_manager.get_client_details()
         })
     except Exception as e:
         logger.error(f"Error getting FL status: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/fl_dashboard')
+def fl_dashboard():
+    """
+    Federated Learning Dashboard
+    
+    Visual interface for monitoring federated learning training.
+    """
+    return render_template('fl_dashboard.html')
+
+
 @app.route('/api/fl/simulate', methods=['POST'])
 def run_fl_simulation():
     """
-    Run Federated Learning Simulation
+    Run Federated Learning (Real Implementation Only)
     
-    Runs a simulated FL training session with configurable parameters.
+    Runs FL training with configurable parameters.
+    Only real FL mode is supported - no simulation.
+    
+    Request body:
+    {
+        "num_rounds": int,
+        "num_clients": int,
+        "local_epochs": int,
+        "learning_rate": float,
+        ... (other config parameters)
+    }
     """
     try:
         data = request.get_json() or {}
-        num_rounds = data.get('num_rounds', 3)
-        num_clients = data.get('num_clients', 3)
         
-        logger.info(f"Starting FL simulation: {num_rounds} rounds, {num_clients} clients")
+        # Real FL mode for Recommender
+        logger.info("Starting real federated learning for Hybrid Recommender")
         
         from modules.federated.fl_config import FLConfig
-        from modules.federated import FederatedSimulator
+        from modules.federated.recommender_flower_server import RecommenderFLServerManager
+        from modules.federated.recommender_data_loader import RecommenderFLDataLoader
+        from modules.federated.recommender_flower_client import create_recommender_client_fn
         
+        # Get database connection
+        db = get_db()
+        
+        # Create config
         config = FLConfig(
-            num_rounds=num_rounds,
-            num_simulated_clients=num_clients,
-            verbose=False
+            num_rounds=data.get('num_rounds', 5),
+            num_simulated_clients=data.get('num_clients', 3),
+            local_epochs=data.get('local_epochs', 1),
+            learning_rate=data.get('learning_rate', 0.1),  # Higher LR for weight updates
+            data_dir=data.get('data_dir', 'data/sessions'),
+            data_split=data.get('data_split', 'iid'),
+            use_simulation=False,
+            deployment_mode=data.get('deployment_mode', 'local'),
+            db_path=data.get('db_path', 'pharmacy.db')
         )
         
-        simulator = FederatedSimulator(config=config)
-        results = simulator.run_simulation()
+        # Load and split prescription data
+        data_loader = RecommenderFLDataLoader(
+            db_connection=db,
+            data_dir=config.data_dir
+        )
         
-        logger.info("FL simulation complete")
+        client_data_splits = data_loader.split_data(
+            num_clients=config.num_simulated_clients,
+            split_type=config.data_split,
+            seed=config.data_seed
+        )
+        
+        # Create client function
+        client_fn = create_recommender_client_fn(
+            client_data_splits=client_data_splits,
+            config={
+                "db_connection": db,
+                "learning_rate": config.learning_rate,
+                "local_epochs": config.local_epochs,
+                "data_dir": config.data_dir,
+                "checkpoint_dir": config.checkpoint_dir
+            }
+        )
+        
+        # Create server manager
+        server_manager = RecommenderFLServerManager(config=config, client_fn=client_fn)
+        
+        # Run federated learning
+        results = server_manager.run_federated_learning(
+            server_address=config.server_address
+        )
+        
+        logger.info("Recommender FL complete")
         
         return jsonify({
             'success': True,
-            'message': 'Simulation complete',
-            'results': {
-                'total_rounds': results['total_rounds'],
-                'num_clients': results['num_clients'],
-                'duration_seconds': round(results['duration_seconds'], 2),
-                'final_metrics': results['final_metrics']
-            },
-            'rounds': [
-                {
-                    'round': r['round'],
-                    'clients': r['num_clients'],
-                    'avg_loss': r['avg_loss'],
-                    'avg_wer': r['avg_wer']
-                }
-                for r in results['rounds']
-            ]
+            'mode': 'real',
+            'message': 'Federated learning complete',
+            'results': results
+        })
+    
+    except Exception as e:
+        logger.error(f"Error running FL: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fl/progress', methods=['GET'])
+def get_fl_progress():
+    """
+    Get Real-time Training Progress
+    
+    Returns current training progress and status.
+    """
+    try:
+        server_manager = get_fl_server_manager()
+        status = server_manager.get_status()
+        
+        return jsonify({
+            'success': True,
+            'progress': {
+                'current_round': status['current_round'],
+                'total_rounds': status['total_rounds'],
+                'progress_percent': status.get('progress_percent', 0),
+                'is_running': status['is_running'],
+                'latest_metrics': status['round_metrics'][-1] if status['round_metrics'] else None
+            }
         })
     except Exception as e:
-        logger.error(f"Error running FL simulation: {e}")
+        logger.error(f"Error getting FL progress: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fl/start', methods=['POST'])
+def start_fl_server():
+    """
+    Start Flower Server
+    
+    Starts the Flower server for distributed federated learning.
+    Clients can then connect to participate.
+    """
+    try:
+        data = request.get_json() or {}
+        
+        from modules.federated.fl_config import FLConfig
+        from modules.federated.recommender_flower_server import RecommenderFLServerManager
+        
+        config = FLConfig(
+            num_rounds=data.get('num_rounds', 10),
+            server_address=data.get('server_address', '0.0.0.0:8080'),
+            use_simulation=False
+        )
+        
+        server_manager = get_fl_server_manager()
+        server_manager.start_server(server_address=config.server_address)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Flower server started on {config.server_address}',
+            'server_address': config.server_address
+        })
+    except Exception as e:
+        logger.error(f"Error starting FL server: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fl/register-client', methods=['POST'])
+def register_fl_client():
+    """
+    Register a Federated Learning Client
+    
+    Registers a client for distributed federated learning.
+    """
+    try:
+        data = request.get_json() or {}
+        
+        client_id = data.get('client_id')
+        if not client_id:
+            return jsonify({'success': False, 'error': 'client_id required'}), 400
+        
+        client_manager = get_fl_client_manager()
+        
+        success = client_manager.register_client(
+            client_id=client_id,
+            data_size=data.get('data_size', 0),
+            capabilities=data.get('capabilities', {}),
+            metadata=data.get('metadata', {})
+        )
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Client {client_id} registered',
+                'client_id': client_id
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Registration failed'}), 500
+    
+    except Exception as e:
+        logger.error(f"Error registering client: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fl/heartbeat', methods=['POST'])
+def client_heartbeat():
+    """
+    Client Heartbeat
+    
+    Clients send heartbeat to indicate they're alive.
+    """
+    try:
+        data = request.get_json() or {}
+        client_id = data.get('client_id')
+        
+        if not client_id:
+            return jsonify({'success': False, 'error': 'client_id required'}), 400
+        
+        client_manager = get_fl_client_manager()
+        success = client_manager.record_heartbeat(client_id)
+        
+        return jsonify({
+            'success': success,
+            'message': 'Heartbeat recorded' if success else 'Client not found'
+        })
+    
+    except Exception as e:
+        logger.error(f"Error recording heartbeat: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fl/metrics', methods=['GET'])
+def get_fl_metrics():
+    """
+    Get Federated Learning Metrics History
+    
+    Returns complete metrics history for visualization.
+    """
+    try:
+        server_manager = get_fl_server_manager()
+        metrics_history = server_manager.get_metrics_history()
+        
+        return jsonify({
+            'success': True,
+            'metrics': metrics_history
+        })
+    except Exception as e:
+        logger.error(f"Error getting FL metrics: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fl/learning-stats', methods=['GET'])
+def get_learning_stats():
+    """
+    Get Incremental Learning Statistics
+    
+    Returns cumulative learning statistics, recent events, and weight evolution.
+    """
+    try:
+        history = get_learning_history()
+        learner = get_incremental_learner()
+        
+        stats = history.get_stats()
+        recent_events = history.get_recent_events(limit=10)
+        today_events = history.get_today_events()
+        weight_evolution = history.get_weight_evolution()
+        learning_rate = history.get_learning_rate()
+        current_weights = learner.get_current_weights()
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_learnings': stats.get('total_learnings', 0),
+                'today_count': stats.get('today_count', 0),
+                'last_learning': stats.get('last_learning'),
+                'learning_rate_per_hour': round(learning_rate, 2),
+                'current_weights': current_weights
+            },
+            'recent_events': recent_events,
+            'today_events': today_events,
+            'weight_evolution': weight_evolution[-20:] if len(weight_evolution) > 20 else weight_evolution,  # Last 20 points
+            'medicine_patterns': stats.get('medicine_patterns', {})
+        })
+    except Exception as e:
+        logger.error(f"Error getting learning stats: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/fl/learning-history', methods=['GET'])
+def get_learning_history_endpoint():
+    """
+    Get Learning History
+    
+    Returns full learning history with optional filters.
+    """
+    try:
+        history = get_learning_history()
+        
+        # Get query parameters
+        limit = request.args.get('limit', type=int, default=50)
+        offset = request.args.get('offset', type=int, default=0)
+        
+        all_events = history.history
+        total = len(all_events)
+        
+        # Apply pagination
+        paginated_events = all_events[offset:offset+limit]
+        
+        return jsonify({
+            'success': True,
+            'events': paginated_events,
+            'total': total,
+            'limit': limit,
+            'offset': offset
+        })
+    except Exception as e:
+        logger.error(f"Error getting learning history: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

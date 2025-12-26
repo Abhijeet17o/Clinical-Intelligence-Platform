@@ -24,7 +24,21 @@ scipy>=1.11.0
 lime>=0.2.0
 # shap>=0.42.0
 
-# Note: Flower framework for production FL (not needed for simulation)
-# flwr>=1.5.0
+# Federated Learning Framework
+flwr>=1.5.0
+
+# PyTorch for Whisper fine-tuning
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Data handling
+datasets>=2.14.0
+
+# Audio processing for training
+librosa>=0.10.0
+
+# Metrics calculation
+jiwer>=3.0.0
+
 # Environment variables
 python-dotenv>=1.0.0
