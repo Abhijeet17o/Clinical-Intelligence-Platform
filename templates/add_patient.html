@@ -264,6 +264,23 @@
                 </div>
                 
                 <div class="form-group">
+                    <label for="gender">
+                        Gender
+                    </label>
+                    <select 
+                        id="gender" 
+                        name="gender"
+                        style="width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em; font-family: inherit; cursor: pointer;"
+                    >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <div class="form-info">Optional: Select the patient's gender</div>
+                </div>
+                
+                <div class="form-group">
                     <label for="contact_info">
                         Contact Information
                     </label>
@@ -274,6 +291,19 @@
                         placeholder="Phone number, email, or address"
                     >
                     <div class="form-info">Optional: Enter phone number, email, or other contact details</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="insurance_info">
+                        Insurance Information
+                    </label>
+                    <input 
+                        type="text" 
+                        id="insurance_info" 
+                        name="insurance_info"
+                        placeholder="Insurance provider and policy number"
+                    >
+                    <div class="form-info">Optional: Enter insurance provider and policy information</div>
                 </div>
                 
                 <div class="btn-container">

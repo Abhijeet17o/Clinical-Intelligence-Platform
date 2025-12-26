@@ -120,6 +120,8 @@ def new_patient():
         full_name = request.form.get('full_name', '').strip()
         date_of_birth = request.form.get('date_of_birth', '').strip()
         contact_info = request.form.get('contact_info', '').strip()
+        gender = request.form.get('gender', '').strip()
+        insurance_info = request.form.get('insurance_info', '').strip()
         
         # Validate required fields
         if not full_name:
@@ -137,7 +139,9 @@ def new_patient():
             patient_id=patient_id,
             full_name=full_name,
             date_of_birth=date_of_birth,
-            contact_info=contact_info
+            contact_info=contact_info,
+            gender=gender,
+            insurance_info=insurance_info
         )
         
         if success:
@@ -246,6 +250,36 @@ def process_consultation(patient_id):
         ehr_autofill = get_ehr_autofill()
         updated_ehr_data = ehr_autofill.autofill_ehr(transcript_path, current_ehr_data)
         logger.info("EHR extraction complete")
+        
+        # Step 4.5: Extract demographics if they are empty
+        demographics_updated = False
+        if not patient.get('gender') or not patient.get('insurance_info'):
+            logger.info("Extracting demographics (gender, insurance)...")
+            # Read transcript for demographic extraction
+            with open(transcript_path, 'r', encoding='utf-8') as f:
+                transcript_data = json.load(f)
+            
+            transcript_text = transcript_data.get('full_transcript', '')
+            demographics = ehr_autofill.extract_with_gemini(
+                transcript_text, 
+                ['gender', 'insurance_info']
+            )
+            
+            # Update patient table if demographics were extracted
+            update_gender = demographics.get('gender', '') if not patient.get('gender') else patient.get('gender')
+            update_insurance = demographics.get('insurance_info', '') if not patient.get('insurance_info') else patient.get('insurance_info')
+            
+            if update_gender or update_insurance:
+                demographics_updated = db.update_patient_info(
+                    patient_id=patient_id,
+                    full_name=patient['full_name'],
+                    date_of_birth=patient.get('date_of_birth'),
+                    contact_info=patient.get('contact_info'),
+                    gender=update_gender,
+                    insurance_info=update_insurance
+                )
+                if demographics_updated:
+                    logger.info(f"Demographics updated: gender={update_gender}, insurance={update_insurance}")
         
         # Step 5: Update patient EHR in database (convert dict back to JSON string)
         updated_ehr_data_str = json.dumps(updated_ehr_data) if isinstance(updated_ehr_data, dict) else updated_ehr_data
@@ -470,13 +504,15 @@ def update_patient(patient_id):
     """
     Update Patient Information
     
-    Updates patient's basic information (name, DOB, contact).
+    Updates patient's basic information (name, DOB, contact, gender, insurance).
     """
     try:
         data = request.get_json()
         full_name = data.get('full_name', '').strip()
         date_of_birth = data.get('date_of_birth', '').strip()
         contact_info = data.get('contact_info', '').strip()
+        gender = data.get('gender', '').strip()
+        insurance_info = data.get('insurance_info', '').strip()
         
         if not full_name:
             return jsonify({
@@ -496,25 +532,24 @@ def update_patient(patient_id):
                 'error': 'Patient not found'
             }), 404
         
-        # Update patient using database method (we'll need to add this)
-        # For now, we'll manually update via SQL
-        conn = db.conn
-        cursor = conn.cursor()
+        # Update patient using database method
+        success = db.update_patient_info(
+            patient_id=patient_id,
+            full_name=full_name,
+            date_of_birth=date_of_birth,
+            contact_info=contact_info,
+            gender=gender,
+            insurance_info=insurance_info
+        )
         
-        cursor.execute('''
-            UPDATE patients 
-            SET full_name = ?, date_of_birth = ?, contact_info = ?
-            WHERE patient_id = ?
-        ''', (full_name, date_of_birth, contact_info, patient_id))
-        
-        conn.commit()
-        
-        logger.info(f"Patient information updated successfully: {patient_id}")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Patient information updated successfully'
-        })
+        if success:
+            logger.info(f"Patient information updated successfully: {patient_id}")
+            return jsonify({
+                'success': True,
+                'message': 'Patient information updated successfully'
+            })
+        else:
+            raise Exception("Failed to update patient information")
         
     except Exception as e:
         logger.error(f"Error updating patient: {str(e)}")
@@ -652,6 +687,131 @@ def delete_medicine(medicine_id):
     except Exception as e:
         logger.error(f"Error deleting medicine: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/ehr_report/<patient_id>')
+def ehr_report(patient_id):
+    """
+    Comprehensive EHR Report View
+    
+    Displays full electronic health record for a patient with all sections.
+    
+    Args:
+        patient_id (str): Unique identifier for the patient
+    """
+    logger.info(f"Loading EHR report for patient: {patient_id}")
+    
+    # Fetch patient data from database
+    db = get_db()
+    patient = db.get_patient(patient_id)
+    
+    if not patient:
+        logger.warning(f"Patient not found: {patient_id}")
+        flash(f'Patient with ID {patient_id} not found.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Parse EHR data
+    try:
+        ehr_data = json.loads(patient['ehr_data']) if patient['ehr_data'] else {}
+    except:
+        ehr_data = {}
+    
+    # Ensure all sections exist
+    if 'vital_signs' not in ehr_data:
+        ehr_data['vital_signs'] = []
+    if 'clinical_notes' not in ehr_data:
+        ehr_data['clinical_notes'] = []
+    if 'medications' not in ehr_data:
+        ehr_data['medications'] = []
+    if 'diagnoses' not in ehr_data:
+        ehr_data['diagnoses'] = []
+    if 'procedures' not in ehr_data:
+        ehr_data['procedures'] = []
+    if 'immunizations' not in ehr_data:
+        ehr_data['immunizations'] = []
+    if 'lab_results' not in ehr_data:
+        ehr_data['lab_results'] = []
+    if 'prescriptions' not in ehr_data:
+        ehr_data['prescriptions'] = []
+    
+    # Calculate age if date of birth is provided
+    age = 'Unknown'
+    if patient.get('date_of_birth'):
+        try:
+            from datetime import datetime
+            dob = datetime.strptime(patient['date_of_birth'], '%Y-%m-%d')
+            today = datetime.now()
+            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        except:
+            age = 'Unknown'
+    
+    logger.info(f"Loaded EHR report for: {patient['full_name']} (ID: {patient_id})")
+    
+    # Render the EHR report template with patient data
+    return render_template('ehr_report.html', patient=patient, ehr_data=ehr_data, age=age)
+
+
+@app.route('/update_ehr/<patient_id>', methods=['POST'])
+def update_ehr(patient_id):
+    """
+    Update EHR Data
+    
+    Adds new entries to specific EHR sections.
+    """
+    try:
+        data = request.get_json()
+        section = data.get('section')
+        entry_data = data.get('data')
+        
+        if not section or not entry_data:
+            return jsonify({
+                'success': False,
+                'error': 'Section and data are required'
+            }), 400
+        
+        logger.info(f"Updating EHR section '{section}' for patient: {patient_id}")
+        
+        db = get_db()
+        patient = db.get_patient(patient_id)
+        
+        if not patient:
+            return jsonify({
+                'success': False,
+                'error': 'Patient not found'
+            }), 404
+        
+        # Parse current EHR data
+        try:
+            ehr_data = json.loads(patient['ehr_data']) if patient['ehr_data'] else {}
+        except:
+            ehr_data = {}
+        
+        # Ensure section exists
+        if section not in ehr_data:
+            ehr_data[section] = []
+        
+        # Add new entry
+        ehr_data[section].append(entry_data)
+        
+        # Update patient EHR
+        updated_ehr_json = json.dumps(ehr_data, indent=2)
+        success = db.update_patient_ehr(patient_id, updated_ehr_json)
+        
+        if success:
+            logger.info(f"EHR section '{section}' updated successfully for patient: {patient_id}")
+            return jsonify({
+                'success': True,
+                'message': f'{section} updated successfully'
+            })
+        else:
+            raise Exception("Failed to update patient EHR")
+        
+    except Exception as e:
+        logger.error(f"Error updating EHR: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 # Cleanup database connection when app shuts down

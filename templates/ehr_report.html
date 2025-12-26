@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EHR Report - {{ patient.full_name }} - EHR System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 40px;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .btn-back {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .btn-back:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-print {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-print:hover {
+            background: #218838;
+        }
+        
+        .patient-header {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .patient-info-item {
+            color: white;
+        }
+        
+        .patient-info-item label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .patient-info-item .value {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .ehr-section {
+            margin-bottom: 35px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn-edit {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-edit:hover {
+            background: #e0a800;
+        }
+        
+        .btn-add {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-add:hover {
+            background: #5568d3;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .data-table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover {
+            background: #f5f7fa;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .data-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .data-item-label {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .data-item-value {
+            color: #333;
+            font-size: 1em;
+        }
+        
+        .note-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .note-date {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .note-content {
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+            }
+            
+            .action-buttons {
+                display: none;
+            }
+            
+            .btn-edit, .btn-add {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <h1>📋 Electronic Health Record</h1>
+                <div class="action-buttons">
+                    <button onclick="window.print()" class="btn btn-print">🖨️ Print</button>
+                    <a href="/appointment/{{ patient.patient_id }}" class="btn btn-back">← Back</a>
+                </div>
+            </div>
+            
+            <div class="patient-header">
+                <div class="patient-info-item">
+                    <label>Patient Name</label>
+                    <div class="value">{{ patient.full_name }}</div>
+                </div>
+                <div class="patient-info-item">
+                    <label>Patient ID</label>
+                    <div class="value">{{ patient.patient_id }}</div>
+                </div>
+                <div class="patient-info-item">
+                    <label>Date of Birth</label>
+                    <div class="value">{{ patient.date_of_birth or 'Not recorded' }}</div>
+                </div>
+                <div class="patient-info-item">
+                    <label>Age</label>
+                    <div class="value">{{ age }} years</div>
+                </div>
+                <div class="patient-info-item">
+                    <label>Gender</label>
+                    <div class="value">{{ patient.gender or 'Not recorded' }}</div>
+                </div>
+                <div class="patient-info-item">
+                    <label>Contact</label>
+                    <div class="value">{{ patient.contact_info or 'Not recorded' }}</div>
+                </div>
+                <div class="patient-info-item">
+                    <label>Insurance</label>
+                    <div class="value">{{ patient.insurance_info or 'Not recorded' }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- Vital Signs Section -->
+            <div class="ehr-section">
+                <div class="section-header">
+                    <h2 class="section-title">💓 Vital Signs</h2>
+                    <button onclick="addVitalSigns()" class="btn btn-add">+ Add New</button>
+                </div>
+                {% if ehr_data.vital_signs and ehr_data.vital_signs|length > 0 %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Height (cm)</th>
+                                <th>Weight (kg)</th>
+                                <th>BMI</th>
+                                <th>BP (mmHg)</th>
+                                <th>Pulse (bpm)</th>
+                                <th>Temp (°F)</th>
+                                <th>Resp Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for vital in ehr_data.vital_signs %}
+                            <tr>
+                                <td>{{ vital.date }}</td>
+                                <td>{{ vital.height or '-' }}</td>
+                                <td>{{ vital.weight or '-' }}</td>
+                                <td>{{ vital.bmi or '-' }}</td>
+                                <td>{{ vital.blood_pressure or '-' }}</td>
+                                <td>{{ vital.pulse_rate or '-' }}</td>
+                                <td>{{ vital.temperature or '-' }}</td>
+                                <td>{{ vital.respiratory_rate or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">No vital signs recorded yet</div>
+                {% endif %}
+            </div>
+            
+            <!-- Clinical Notes Section -->
+            <div class="ehr-section">
+                <div class="section-header">
+                    <h2 class="section-title">📝 Clinical Notes</h2>
+                    <button onclick="addClinicalNote()" class="btn btn-add">+ Add Note</button>
+                </div>
+                {% if ehr_data.clinical_notes and ehr_data.clinical_notes|length > 0 %}
+                    {% for note in ehr_data.clinical_notes %}
+                    <div class="note-card">
+                        <div class="note-header">
+                            <strong>{{ note.type or 'General Note' }}</strong>
+                            <span class="note-date">📅 {{ note.date }}</span>
+                        </div>
+                        <div class="note-content">
+                            <p><strong>Subjective:</strong> {{ note.subjective or 'N/A' }}</p>
+                            <p><strong>Objective:</strong> {{ note.objective or 'N/A' }}</p>
+                            <p><strong>Assessment:</strong> {{ note.assessment or 'N/A' }}</p>
+                            <p><strong>Plan:</strong> {{ note.plan or 'N/A' }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">No clinical notes recorded yet</div>
+                {% endif %}
+            </div>
+            
+            <!-- Diagnoses & Problem List Section -->
+            <div class="ehr-section">
+                <div class="section-header">
+                    <h2 class="section-title">🏥 Diagnoses & Problem List</h2>
+                    <button onclick="addDiagnosis()" class="btn btn-add">+ Add Diagnosis</button>
+                </div>
+                {% if ehr_data.diagnoses and ehr_data.diagnoses|length > 0 %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Diagnosis</th>
+                                <th>Status</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for diagnosis in ehr_data.diagnoses %}
+                            <tr>
+                                <td>{{ diagnosis.date }}</td>
+                                <td><strong>{{ diagnosis.condition }}</strong></td>
+                                <td><span style="padding: 4px 10px; border-radius: 12px; background: {% if diagnosis.status == 'Active' %}#d4edda{% else %}#f8d7da{% endif %}; color: {% if diagnosis.status == 'Active' %}#155724{% else %}#721c24{% endif %}; font-size: 0.85em;">{{ diagnosis.status }}</span></td>
+                                <td>{{ diagnosis.notes or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">No diagnoses recorded yet</div>
+                {% endif %}
+            </div>
+            
+            <!-- Medications Section -->
+            <div class="ehr-section">
+                <div class="section-header">
+                    <h2 class="section-title">💊 Current Medications</h2>
+                    <button onclick="addMedication()" class="btn btn-add">+ Add Medication</button>
+                </div>
+                {% if ehr_data.medications and ehr_data.medications|length > 0 %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Medication</th>
+                                <th>Dosage</th>
+                                <th>Frequency</th>
+                                <th>Start Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for med in ehr_data.medications %}
+                            <tr>
+                                <td><strong>{{ med.name }}</strong></td>
+                                <td>{{ med.dosage }}</td>
+                                <td>{{ med.frequency }}</td>
+                                <td>{{ med.start_date }}</td>
+                                <td><span style="padding: 4px 10px; border-radius: 12px; background: {% if med.status == 'Active' %}#d4edda{% else %}#f8d7da{% endif %}; color: {% if med.status == 'Active' %}#155724{% else %}#721c24{% endif %}; font-size: 0.85em;">{{ med.status }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">No current medications recorded</div>
+                {% endif %}
+            </div>
+            
+            <!-- Laboratory Results Section -->
+            <div class="ehr-section">
+                <div class="section-header">
+                    <h2 class="section-title">🔬 Laboratory Results</h2>
+                    <button onclick="addLabResult()" class="btn btn-add">+ Add Result</button>
+                </div>
+                {% if ehr_data.lab_results and ehr_data.lab_results|length > 0 %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Test Name</th>
+                                <th>Result</th>
+                                <th>Unit</th>
+                                <th>Reference Range</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lab in ehr_data.lab_results %}
+                            <tr>
+                                <td>{{ lab.date }}</td>
+                                <td><strong>{{ lab.test_name }}</strong></td>
+                                <td>{{ lab.result }}</td>
+                                <td>{{ lab.unit }}</td>
+                                <td>{{ lab.reference_range }}</td>
+                                <td><span style="padding: 4px 10px; border-radius: 12px; background: {% if lab.abnormal %}#fff3cd{% else %}#d4edda{% endif %}; color: {% if lab.abnormal %}#856404{% else %}#155724{% endif %}; font-size: 0.85em;">{% if lab.abnormal %}⚠️ Abnormal{% else %}Normal{% endif %}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">No laboratory results recorded yet</div>
+                {% endif %}
+            </div>
+            
+            <!-- Procedures Section -->
+            <div class="ehr-section">
+                <div class="section-header">
+                    <h2 class="section-title">⚕️ Procedures</h2>
+                    <button onclick="addProcedure()" class="btn btn-add">+ Add Procedure</button>
+                </div>
+                {% if ehr_data.procedures and ehr_data.procedures|length > 0 %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Procedure</th>
+                                <th>Performed By</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for procedure in ehr_data.procedures %}
+                            <tr>
+                                <td>{{ procedure.date }}</td>
+                                <td><strong>{{ procedure.name }}</strong></td>
+                                <td>{{ procedure.performed_by }}</td>
+                                <td>{{ procedure.notes or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">No procedures recorded yet</div>
+                {% endif %}
+            </div>
+            
+            <!-- Immunizations Section -->
+            <div class="ehr-section">
+                <div class="section-header">
+                    <h2 class="section-title">💉 Immunization History</h2>
+                    <button onclick="addImmunization()" class="btn btn-add">+ Add Immunization</button>
+                </div>
+                {% if ehr_data.immunizations and ehr_data.immunizations|length > 0 %}
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Vaccine</th>
+                                <th>Dose</th>
+                                <th>Administered By</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for immunization in ehr_data.immunizations %}
+                            <tr>
+                                <td>{{ immunization.date }}</td>
+                                <td><strong>{{ immunization.vaccine }}</strong></td>
+                                <td>{{ immunization.dose }}</td>
+                                <td>{{ immunization.administered_by }}</td>
+                                <td>{{ immunization.notes or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">No immunizations recorded yet</div>
+                {% endif %}
+            </div>
+            
+            <!-- Prescription History Section -->
+            <div class="ehr-section">
+                <div class="section-header">
+                    <h2 class="section-title">📜 Prescription History</h2>
+                </div>
+                {% if ehr_data.prescriptions and ehr_data.prescriptions|length > 0 %}
+                    {% for prescription in ehr_data.prescriptions %}
+                    <div class="note-card">
+                        <div class="note-header">
+                            <strong>Prescription #{{ loop.index }}</strong>
+                            <span class="note-date">📅 {{ prescription.date }}</span>
+                        </div>
+                        <div class="note-content">
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                {% for medicine in prescription.medicines %}
+                                <li>{{ medicine }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">No prescriptions recorded yet</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const patientId = "{{ patient.patient_id }}";
+        
+        async function addVitalSigns() {
+            const html = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="modal">
+                    <div style="background: white; border-radius: 15px; max-width: 600px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+                        <h2 style="margin-bottom: 20px; color: #667eea;">💓 Add Vital Signs</h2>
+                        <form id="vital-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div style="grid-column: 1 / -1;">
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date & Time *</label>
+                                <input type="datetime-local" id="date" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Height (cm)</label>
+                                <input type="number" step="0.1" id="height" placeholder="e.g., 170" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Weight (kg)</label>
+                                <input type="number" step="0.1" id="weight" placeholder="e.g., 70" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Blood Pressure</label>
+                                <input type="text" id="bp" placeholder="e.g., 120/80" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Pulse Rate (bpm)</label>
+                                <input type="number" id="pulse" placeholder="e.g., 72" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Temperature (°F)</label>
+                                <input type="number" step="0.1" id="temp" placeholder="e.g., 98.6" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Respiratory Rate</label>
+                                <input type="number" id="resp" placeholder="e.g., 16" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div style="grid-column: 1 / -1; display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="submit" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">💾 Save</button>
+                                <button type="button" onclick="document.getElementById('modal').remove()" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✕ Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            document.getElementById('vital-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    section: 'vital_signs',
+                    data: {
+                        date: document.getElementById('date').value,
+                        height: document.getElementById('height').value,
+                        weight: document.getElementById('weight').value,
+                        bmi: calculateBMI(document.getElementById('height').value, document.getElementById('weight').value),
+                        blood_pressure: document.getElementById('bp').value,
+                        pulse_rate: document.getElementById('pulse').value,
+                        temperature: document.getElementById('temp').value,
+                        respiratory_rate: document.getElementById('resp').value
+                    }
+                };
+                await saveEHRData(data);
+            });
+        }
+        
+        function calculateBMI(height, weight) {
+            if (!height || !weight) return '';
+            const heightM = height / 100;
+            return (weight / (heightM * heightM)).toFixed(1);
+        }
+        
+        async function addClinicalNote() {
+            const html = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="modal">
+                    <div style="background: white; border-radius: 15px; max-width: 700px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+                        <h2 style="margin-bottom: 20px; color: #667eea;">📝 Add Clinical Note</h2>
+                        <form id="note-form" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date & Time *</label>
+                                <input type="datetime-local" id="date" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Note Type</label>
+                                <select id="type" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                                    <option>General Note</option>
+                                    <option>Progress Note</option>
+                                    <option>Consultation Note</option>
+                                    <option>Follow-up Note</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Subjective (Patient's Complaint)</label>
+                                <textarea id="subjective" rows="2" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;"></textarea>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Objective (Examination Findings)</label>
+                                <textarea id="objective" rows="2" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;"></textarea>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Assessment (Diagnosis)</label>
+                                <textarea id="assessment" rows="2" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;"></textarea>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Plan (Treatment Plan)</label>
+                                <textarea id="plan" rows="2" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;"></textarea>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="submit" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">💾 Save</button>
+                                <button type="button" onclick="document.getElementById('modal').remove()" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✕ Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            document.getElementById('note-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    section: 'clinical_notes',
+                    data: {
+                        date: document.getElementById('date').value,
+                        type: document.getElementById('type').value,
+                        subjective: document.getElementById('subjective').value,
+                        objective: document.getElementById('objective').value,
+                        assessment: document.getElementById('assessment').value,
+                        plan: document.getElementById('plan').value
+                    }
+                };
+                await saveEHRData(data);
+            });
+        }
+        
+        async function addDiagnosis() {
+            const html = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="modal">
+                    <div style="background: white; border-radius: 15px; max-width: 600px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <h2 style="margin-bottom: 20px; color: #667eea;">🏥 Add Diagnosis</h2>
+                        <form id="diagnosis-form" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date *</label>
+                                <input type="date" id="date" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Condition/Diagnosis *</label>
+                                <input type="text" id="condition" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Status</label>
+                                <select id="status" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                                    <option>Active</option>
+                                    <option>Resolved</option>
+                                    <option>Chronic</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes</label>
+                                <textarea id="notes" rows="3" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;"></textarea>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="submit" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">💾 Save</button>
+                                <button type="button" onclick="document.getElementById('modal').remove()" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✕ Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            document.getElementById('diagnosis-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    section: 'diagnoses',
+                    data: {
+                        date: document.getElementById('date').value,
+                        condition: document.getElementById('condition').value,
+                        status: document.getElementById('status').value,
+                        notes: document.getElementById('notes').value
+                    }
+                };
+                await saveEHRData(data);
+            });
+        }
+        
+        async function addMedication() {
+            const html = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="modal">
+                    <div style="background: white; border-radius: 15px; max-width: 600px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <h2 style="margin-bottom: 20px; color: #667eea;">💊 Add Medication</h2>
+                        <form id="med-form" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Medication Name *</label>
+                                <input type="text" id="name" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Dosage *</label>
+                                <input type="text" id="dosage" required placeholder="e.g., 500mg" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Frequency *</label>
+                                <input type="text" id="frequency" required placeholder="e.g., Twice daily" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Start Date *</label>
+                                <input type="date" id="start_date" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Status</label>
+                                <select id="status" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                                    <option>Active</option>
+                                    <option>Discontinued</option>
+                                    <option>Completed</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="submit" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">💾 Save</button>
+                                <button type="button" onclick="document.getElementById('modal').remove()" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✕ Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            document.getElementById('med-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    section: 'medications',
+                    data: {
+                        name: document.getElementById('name').value,
+                        dosage: document.getElementById('dosage').value,
+                        frequency: document.getElementById('frequency').value,
+                        start_date: document.getElementById('start_date').value,
+                        status: document.getElementById('status').value
+                    }
+                };
+                await saveEHRData(data);
+            });
+        }
+        
+        async function addLabResult() {
+            const html = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="modal">
+                    <div style="background: white; border-radius: 15px; max-width: 600px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <h2 style="margin-bottom: 20px; color: #667eea;">🔬 Add Laboratory Result</h2>
+                        <form id="lab-form" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date *</label>
+                                <input type="date" id="date" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Test Name *</label>
+                                <input type="text" id="test_name" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Result *</label>
+                                <input type="text" id="result" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Unit</label>
+                                <input type="text" id="unit" placeholder="e.g., mg/dL" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Reference Range</label>
+                                <input type="text" id="reference" placeholder="e.g., 70-100" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="abnormal" style="width: 20px; height: 20px;">
+                                    <span style="font-weight: bold;">Mark as Abnormal</span>
+                                </label>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="submit" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">💾 Save</button>
+                                <button type="button" onclick="document.getElementById('modal').remove()" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✕ Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            document.getElementById('lab-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    section: 'lab_results',
+                    data: {
+                        date: document.getElementById('date').value,
+                        test_name: document.getElementById('test_name').value,
+                        result: document.getElementById('result').value,
+                        unit: document.getElementById('unit').value,
+                        reference_range: document.getElementById('reference').value,
+                        abnormal: document.getElementById('abnormal').checked
+                    }
+                };
+                await saveEHRData(data);
+            });
+        }
+        
+        async function addProcedure() {
+            const html = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="modal">
+                    <div style="background: white; border-radius: 15px; max-width: 600px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <h2 style="margin-bottom: 20px; color: #667eea;">⚕️ Add Procedure</h2>
+                        <form id="proc-form" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date *</label>
+                                <input type="date" id="date" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Procedure Name *</label>
+                                <input type="text" id="name" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Performed By</label>
+                                <input type="text" id="performed_by" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes</label>
+                                <textarea id="notes" rows="3" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;"></textarea>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="submit" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">💾 Save</button>
+                                <button type="button" onclick="document.getElementById('modal').remove()" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✕ Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            document.getElementById('proc-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    section: 'procedures',
+                    data: {
+                        date: document.getElementById('date').value,
+                        name: document.getElementById('name').value,
+                        performed_by: document.getElementById('performed_by').value,
+                        notes: document.getElementById('notes').value
+                    }
+                };
+                await saveEHRData(data);
+            });
+        }
+        
+        async function addImmunization() {
+            const html = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="modal">
+                    <div style="background: white; border-radius: 15px; max-width: 600px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <h2 style="margin-bottom: 20px; color: #667eea;">💉 Add Immunization</h2>
+                        <form id="imm-form" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date *</label>
+                                <input type="date" id="date" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Vaccine *</label>
+                                <input type="text" id="vaccine" required style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Dose</label>
+                                <input type="text" id="dose" placeholder="e.g., 1st dose" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Administered By</label>
+                                <input type="text" id="administered_by" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes</label>
+                                <textarea id="notes" rows="2" style="width: 100%; padding: 8px; border: 2px solid #e0e0e0; border-radius: 6px;"></textarea>
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <button type="submit" style="flex: 1; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">💾 Save</button>
+                                <button type="button" onclick="document.getElementById('modal').remove()" style="flex: 1; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">✕ Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            document.getElementById('imm-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    section: 'immunizations',
+                    data: {
+                        date: document.getElementById('date').value,
+                        vaccine: document.getElementById('vaccine').value,
+                        dose: document.getElementById('dose').value,
+                        administered_by: document.getElementById('administered_by').value,
+                        notes: document.getElementById('notes').value
+                    }
+                };
+                await saveEHRData(data);
+            });
+        }
+        
+        async function saveEHRData(data) {
+            try {
+                const response = await fetch(`/update_ehr/${patientId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Data saved successfully!');
+                    document.getElementById('modal').remove();
+                    location.reload();
+                } else {
+                    throw new Error(result.error || 'Failed to save data');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('❌ Error saving data: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

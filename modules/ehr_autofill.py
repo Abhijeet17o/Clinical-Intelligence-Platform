@@ -74,8 +74,17 @@ def autofill_ehr(json_transcript_path, patient_ehr_template):
         updated_ehr = patient_ehr_template.copy()
         
         # Get empty fields that need to be filled
-        empty_fields = {key: value for key, value in updated_ehr.items() 
-                       if not value or value == "" or value == []}
+        # Handle both simple fields (strings) and complex fields (lists)
+        empty_fields = {}
+        for key, value in updated_ehr.items():
+            if isinstance(value, list):
+                if len(value) == 0:
+                    empty_fields[key] = value
+            elif isinstance(value, str):
+                if not value or value.strip() == "":
+                    empty_fields[key] = value
+            elif value is None or value == "":
+                empty_fields[key] = value
         
         if not empty_fields:
             logger.info("No empty fields to fill")
@@ -83,14 +92,31 @@ def autofill_ehr(json_transcript_path, patient_ehr_template):
         
         logger.info(f"Fields to fill: {list(empty_fields.keys())}")
         
-        # Use Gemini to extract information
+        # Use Gemini to extract comprehensive medical information
         extracted_data = extract_with_gemini(transcript_text, list(empty_fields.keys()))
         
-        # Update the EHR with extracted information
+        # Update the EHR with extracted information (only if field is still empty)
         for field, value in extracted_data.items():
-            if field in updated_ehr and value:
-                updated_ehr[field] = value
-                logger.info(f"✓ Filled '{field}': {value}")
+            if field in updated_ehr:
+                # Check if field is still empty before updating
+                current_value = updated_ehr[field]
+                is_empty = False
+                
+                if isinstance(current_value, list):
+                    is_empty = len(current_value) == 0
+                elif isinstance(current_value, str):
+                    is_empty = not current_value or current_value.strip() == ""
+                elif current_value is None:
+                    is_empty = True
+                
+                # Only update if field is empty and we extracted something
+                if is_empty and value:
+                    if isinstance(value, list) and len(value) > 0:
+                        updated_ehr[field] = value
+                        logger.info(f"✓ Filled '{field}' with {len(value)} items")
+                    elif isinstance(value, str) and value.strip():
+                        updated_ehr[field] = value
+                        logger.info(f"✓ Filled '{field}': {value[:100]}...")
         
         return updated_ehr
         
@@ -132,46 +158,68 @@ def extract_with_gemini(transcript_text, fields_to_extract):
         # Use Gemini 2.5 Flash model (stable, fast and efficient)
         model = genai.GenerativeModel('gemini-2.5-flash')
         
-        # Create a detailed prompt for medical information extraction
+        # Determine what fields need to be extracted
+        field_descriptions = {
+            # Demographics (patient table fields)
+            'gender': 'Patient gender (Male/Female/Other)',
+            'insurance_info': 'Insurance provider or policy information',
+            
+            # EHR JSON fields - Vital Signs
+            'vital_signs': 'List of vital sign measurements with dates (height, weight, BMI, blood pressure, pulse, temperature, respiratory rate)',
+            
+            # Clinical information
+            'clinical_notes': 'List of clinical notes/observations from consultations with dates',
+            'symptoms': 'Current symptoms, complaints, or medical conditions mentioned',
+            'diagnoses': 'List of diagnoses or medical conditions identified',
+            'medications': 'List of current medications with dosages and frequencies',
+            
+            # Medical history
+            'allergies_mentioned': 'Drug allergies, food allergies, or environmental allergies',
+            'procedures': 'List of medical procedures performed or planned',
+            'immunizations': 'List of vaccines/immunizations mentioned',
+            'lab_results': 'Laboratory test results with values and dates',
+            'lifestyle_notes': 'Occupation, exercise, diet, smoking, alcohol use, sleep patterns'
+        }
+        
+        # Build extraction prompt only for requested fields
+        fields_section = ""
+        for field in fields_to_extract:
+            if field in field_descriptions:
+                fields_section += f"- **{field}**: {field_descriptions[field]}\n"
+        
+        # Create a comprehensive prompt for medical information extraction
         prompt = f"""
 You are an expert medical information extraction AI. Analyze this doctor-patient conversation and extract ALL relevant medical information.
 
 TRANSCRIPT:
 "{transcript_text}"
 
-YOUR TASK:
-Extract medical information for these fields. If truly nothing is mentioned, return "Not mentioned".
+FIELDS TO EXTRACT:
+{fields_section}
 
-EXTRACTION RULES:
-1. **symptoms**: Extract ANY of these:
-   - Symptoms (headache, fever, pain, nausea, etc.)
-   - Complaints (feeling tired, dizzy, weak, etc.)
-   - Medical conditions (diabetes, hypertension, asthma, etc.)
-   - Chronic diseases or diagnoses mentioned
-   
-2. **allergies_mentioned**: Extract ANY mentions of:
-   - Drug allergies (penicillin, aspirin, etc.)
-   - Food allergies (nuts, shellfish, etc.)
-   - Environmental allergies (pollen, dust, etc.)
-   
-3. **lifestyle_notes**: Extract ANY mentions of:
-   - Occupation or work
-   - Exercise or physical activity
-   - Diet or eating habits
-   - Smoking, alcohol, or substance use
-   - Sleep patterns
-   - Stress levels
+EXTRACTION GUIDELINES:
 
-IMPORTANT:
-- Be VERY inclusive - extract anything medically relevant
-- Include disease names like "diabetes", "cancer", "heart disease" in symptoms
-- Don't be too strict - if patient mentions a condition, capture it!
+1. **Demographics**: Extract gender, insurance info if mentioned
+2. **Vital Signs**: Format as list of objects with date, type, value, unit
+   Example: {{"date": "2025-11-16", "type": "Blood Pressure", "value": "120/80", "unit": "mmHg"}}
+3. **Clinical Notes**: Format as list with date, note text, and provider
+4. **Diagnoses**: Format as list with date, condition name, and ICD code if mentioned
+5. **Medications**: Format as list with name, dosage, frequency, start_date
+6. **Lab Results**: Format as list with test_name, value, unit, reference_range, date, abnormal_flag
+7. **Procedures**: Format as list with date, procedure name, notes
+8. **Immunizations**: Format as list with vaccine name, date, provider
 
-OUTPUT (JSON ONLY):
+IMPORTANT RULES:
+- Be INCLUSIVE - extract anything medically relevant
+- For list fields (vital_signs, clinical_notes, etc.), return as JSON arrays
+- For simple text fields (symptoms, allergies_mentioned, lifestyle_notes), return as strings
+- If nothing is mentioned for a field, return "Not mentioned" for strings or [] for lists
+- Include today's date (2025-11-16) for measurements taken during this consultation
+- Extract disease names, chronic conditions into diagnoses
+
+OUTPUT (JSON ONLY - no markdown):
 {{
-    "symptoms": "<extract here or 'Not mentioned'>",
-    "allergies_mentioned": "<extract here or 'Not mentioned'>",
-    "lifestyle_notes": "<extract here or 'Not mentioned'>"
+{',\n'.join([f'    "{field}": "<extract or \'Not mentioned\'>"' for field in fields_to_extract])}
 }}
 """
         
@@ -199,10 +247,18 @@ OUTPUT (JSON ONLY):
         logger.info("✓ Successfully extracted information using Gemini AI")
         logger.info(f"🔍 Gemini raw response: {extracted_data}")
         
-        # Clean up "Not mentioned" values
-        for key, value in extracted_data.items():
-            if isinstance(value, str) and value.lower() == "not mentioned":
-                extracted_data[key] = ""
+        # Clean up "Not mentioned" values and validate data types
+        for key, value in list(extracted_data.items()):
+            if isinstance(value, str):
+                if value.lower() == "not mentioned" or value.strip() == "":
+                    # Check if this should be a list field
+                    if key in ['vital_signs', 'clinical_notes', 'diagnoses', 'medications', 
+                              'procedures', 'immunizations', 'lab_results']:
+                        extracted_data[key] = []
+                    else:
+                        extracted_data[key] = ""
+            elif isinstance(value, list) and len(value) == 0:
+                extracted_data[key] = []
         
         logger.info(f"📋 After cleanup: {extracted_data}")
         return extracted_data

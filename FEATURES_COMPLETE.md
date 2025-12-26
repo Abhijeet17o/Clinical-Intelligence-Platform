@@ -55,7 +55,7 @@ Full-featured Electronic Health Record web application with AI-powered consultat
 - ✓ **Thread-Safe Database** - `get_db()` creates per-request connections
 - ✓ **Lazy Loading** - AI modules load on-demand (fast startup)
 - ✓ **Error Handling** - Comprehensive try-catch with user-friendly messages
-- ✓ **Auto-Reload Control** - Optional `--no-reload` flag for stable AI processing
+- ✓ **Auto-Reload Control** - Optional `--no-reload` flag for stable AI processing 
 - ✓ **File Validation** - Size limits (50MB) and extension checks
 - ✓ **Session Directories** - Organized file storage per consultation
 

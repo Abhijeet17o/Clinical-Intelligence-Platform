@@ -7,6 +7,7 @@ It tracks medicine details, stock levels, and prescription frequencies.
 
 import sqlite3
 import logging
+import json
 from typing import List, Dict, Optional
 
 # Configure logging
@@ -89,6 +90,8 @@ class MedicineDatabase:
             - full_name: TEXT (patient's full name)
             - date_of_birth: TEXT (patient's date of birth)
             - contact_info: TEXT (patient's contact information)
+            - gender: TEXT (patient's gender)
+            - insurance_info: TEXT (insurance details)
             - ehr_data: TEXT (JSON string containing electronic health record data)
         """
         try:
@@ -100,6 +103,8 @@ class MedicineDatabase:
                     full_name TEXT NOT NULL,
                     date_of_birth TEXT,
                     contact_info TEXT,
+                    gender TEXT,
+                    insurance_info TEXT,
                     ehr_data TEXT NOT NULL DEFAULT '{}'
                 )
             ''')
@@ -107,9 +112,36 @@ class MedicineDatabase:
             self.connection.commit()
             logger.info("✓ Patients table ready")
             
+            # Add new columns if they don't exist (for existing databases)
+            self._add_missing_patient_columns()
+            
         except sqlite3.Error as e:
             logger.error(f"Error creating patients table: {e}")
             raise
+    
+    def _add_missing_patient_columns(self):
+        """Add missing columns to existing patients table"""
+        try:
+            cursor = self.connection.cursor()
+            
+            # Check existing columns
+            cursor.execute("PRAGMA table_info(patients)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            # Add gender column if missing
+            if 'gender' not in columns:
+                cursor.execute('ALTER TABLE patients ADD COLUMN gender TEXT')
+                logger.info("✓ Added 'gender' column to patients table")
+            
+            # Add insurance_info column if missing
+            if 'insurance_info' not in columns:
+                cursor.execute('ALTER TABLE patients ADD COLUMN insurance_info TEXT')
+                logger.info("✓ Added 'insurance_info' column to patients table")
+            
+            self.connection.commit()
+            
+        except sqlite3.Error as e:
+            logger.error(f"Error adding missing columns: {e}")
     
     def add_medicine(self, name: str, description: str, stock_level: int) -> bool:
         """
@@ -342,7 +374,8 @@ class MedicineDatabase:
     # ========== PATIENT MANAGEMENT METHODS ==========
     
     def add_new_patient(self, patient_id: str, full_name: str, 
-                       date_of_birth: str = '', contact_info: str = '') -> bool:
+                       date_of_birth: str = '', contact_info: str = '',
+                       gender: str = '', insurance_info: str = '') -> bool:
         """
         Add a new patient to the database.
         
@@ -351,6 +384,8 @@ class MedicineDatabase:
             full_name (str): Patient's full name
             date_of_birth (str): Patient's date of birth (optional)
             contact_info (str): Patient's contact information (optional)
+            gender (str): Patient's gender (optional)
+            insurance_info (str): Patient's insurance information (optional)
         
         Returns:
             bool: True if successful, False otherwise
@@ -368,14 +403,25 @@ class MedicineDatabase:
         try:
             cursor = self.connection.cursor()
             
-            # Initial EHR data is an empty JSON object
-            initial_ehr = '{}'
+            # Initialize comprehensive EHR data structure
+            initial_ehr = {
+                "vital_signs": [],
+                "clinical_notes": [],
+                "medications": [],
+                "diagnoses": [],
+                "procedures": [],
+                "immunizations": [],
+                "lab_results": [],
+                "prescriptions": []
+            }
             
             cursor.execute('''
-                INSERT INTO patients (patient_id, full_name, date_of_birth, contact_info, ehr_data)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO patients (patient_id, full_name, date_of_birth, contact_info, 
+                                     gender, insurance_info, ehr_data)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ''', (patient_id.strip(), full_name.strip(), date_of_birth.strip(), 
-                  contact_info.strip(), initial_ehr))
+                  contact_info.strip(), gender.strip(), insurance_info.strip(),
+                  json.dumps(initial_ehr)))
             
             self.connection.commit()
             logger.info(f"✓ Added new patient: {full_name} (ID: {patient_id})")
@@ -397,7 +443,8 @@ class MedicineDatabase:
         
         Returns:
             Dict or None: Dictionary with patient details, or None if not found
-                         Keys: patient_id, full_name, date_of_birth, contact_info, ehr_data
+                         Keys: patient_id, full_name, date_of_birth, contact_info, 
+                               gender, insurance_info, ehr_data
         """
         try:
             cursor = self.connection.cursor()
@@ -411,6 +458,8 @@ class MedicineDatabase:
                     'full_name': row['full_name'],
                     'date_of_birth': row['date_of_birth'],
                     'contact_info': row['contact_info'],
+                    'gender': row['gender'] if 'gender' in row.keys() else '',
+                    'insurance_info': row['insurance_info'] if 'insurance_info' in row.keys() else '',
                     'ehr_data': row['ehr_data']
                 }
             else:
@@ -453,13 +502,79 @@ class MedicineDatabase:
             logger.error(f"Error updating patient EHR: {e}")
             return False
     
+    def update_patient_info(self, patient_id: str, full_name: str = None, 
+                           date_of_birth: str = None, contact_info: str = None,
+                           gender: str = None, insurance_info: str = None) -> bool:
+        """
+        Update patient demographic information.
+        
+        Args:
+            patient_id (str): Unique identifier for the patient
+            full_name (str): Patient's full name (optional)
+            date_of_birth (str): Patient's date of birth (optional)
+            contact_info (str): Patient's contact information (optional)
+            gender (str): Patient's gender (optional)
+            insurance_info (str): Patient's insurance information (optional)
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            cursor = self.connection.cursor()
+            
+            # Build UPDATE query dynamically based on provided parameters
+            updates = []
+            values = []
+            
+            if full_name is not None:
+                updates.append("full_name = ?")
+                values.append(full_name.strip())
+            
+            if date_of_birth is not None:
+                updates.append("date_of_birth = ?")
+                values.append(date_of_birth.strip())
+            
+            if contact_info is not None:
+                updates.append("contact_info = ?")
+                values.append(contact_info.strip())
+            
+            if gender is not None:
+                updates.append("gender = ?")
+                values.append(gender.strip())
+            
+            if insurance_info is not None:
+                updates.append("insurance_info = ?")
+                values.append(insurance_info.strip())
+            
+            if not updates:
+                logger.warning("No fields to update")
+                return False
+            
+            values.append(patient_id)
+            query = f"UPDATE patients SET {', '.join(updates)} WHERE patient_id = ?"
+            
+            cursor.execute(query, values)
+            
+            if cursor.rowcount == 0:
+                logger.warning(f"Patient with ID '{patient_id}' not found in database")
+                return False
+            
+            self.connection.commit()
+            logger.info(f"✓ Updated patient information for: {patient_id}")
+            return True
+            
+        except sqlite3.Error as e:
+            logger.error(f"Error updating patient info: {e}")
+            return False
+    
     def get_all_patients(self) -> List[Dict]:
         """
         Retrieve all patients from the database.
         
         Returns:
             List[Dict]: List of dictionaries, where each dictionary represents a patient
-                       with keys: patient_id, full_name, date_of_birth, contact_info, ehr_data
+                       with keys: patient_id, full_name, date_of_birth, contact_info, 
+                                 gender, insurance_info, ehr_data
         """
         try:
             cursor = self.connection.cursor()
@@ -475,6 +590,8 @@ class MedicineDatabase:
                     'full_name': row['full_name'],
                     'date_of_birth': row['date_of_birth'],
                     'contact_info': row['contact_info'],
+                    'gender': row['gender'] if 'gender' in row.keys() else '',
+                    'insurance_info': row['insurance_info'] if 'insurance_info' in row.keys() else '',
                     'ehr_data': row['ehr_data']
                 })
             

@@ -392,12 +392,21 @@
                             {% endif %}
                         </div>
                         <button 
+                            id="btn-view-ehr" 
+                            onclick="window.location.href='/ehr_report/{{ patient.patient_id }}'"
+                            style="margin-top: 15px; width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: transform 0.2s;"
+                            onmouseover="this.style.transform='translateY(-2px)'"
+                            onmouseout="this.style.transform='translateY(0)'"
+                        >
+                            📋 View Full EHR Report
+                        </button>
+                        <button 
                             id="btn-view-history" 
                             style="margin-top: 15px; width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: transform 0.2s;"
                             onmouseover="this.style.transform='translateY(-2px)'"
                             onmouseout="this.style.transform='translateY(0)'"
                         >
-                            📜 View Prescription History
+                            📜 View Consultation History
                         </button>
                     </div>
                 </div>
@@ -487,6 +496,9 @@
     </div>
     
     <script>
+        // Track current consultation ID (set when consultation is processed)
+        let currentConsultationId = null;
+        
         // Patient data validation and button enablement
         document.addEventListener('DOMContentLoaded', function() {
             // Get patient name element
@@ -628,14 +640,17 @@
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ prescription: prescriptionText })
+                        body: JSON.stringify({ 
+                            prescription: prescriptionText,
+                            consultation_id: currentConsultationId  // Link to current consultation
+                        })
                     });
                     
                     const result = await response.json();
                     
                     if (result.success) {
                         alert('✅ Prescription saved successfully!');
-                        console.log('Prescription saved:', result);
+                        console.log('Prescription saved and linked to consultation:', currentConsultationId);
                         
                         // Clear prescription text area
                         prescriptionTextArea.value = '';
@@ -643,6 +658,9 @@
                         // Clear search results and AI recommendations
                         searchResults.innerHTML = '';
                         document.getElementById('ai-recommendations').innerHTML = 'AI recommendations will appear here after consultation recording is processed';
+                        
+                        // Clear consultation ID after saving
+                        currentConsultationId = null;
                         
                     } else {
                         throw new Error(result.error || 'Failed to save prescription');
@@ -657,7 +675,7 @@
                 }
             });
             
-            // View prescription history functionality
+            // View consultation history functionality
             const viewHistoryBtn = document.getElementById('btn-view-history');
             
             viewHistoryBtn.addEventListener('click', async function() {
@@ -666,79 +684,166 @@
                 viewHistoryBtn.innerHTML = '⏳ Loading...';
                 
                 try {
-                    const response = await fetch(`/get_prescriptions/${patientId}`);
+                    const response = await fetch(`/consultation_history/${patientId}`);
                     const result = await response.json();
                     
                     if (result.success) {
-                        displayPrescriptionHistory(result.prescriptions);
+                        displayConsultationHistory(result.consultations);
                     } else {
-                        throw new Error(result.error || 'Failed to load prescription history');
+                        throw new Error(result.error || 'Failed to load consultation history');
                     }
                 } catch (error) {
                     console.error('History error:', error);
-                    alert('❌ Error loading prescription history: ' + error.message);
+                    alert('❌ Error loading consultation history: ' + error.message);
                 } finally {
                     // Re-enable button
                     viewHistoryBtn.disabled = false;
-                    viewHistoryBtn.innerHTML = '📜 View Prescription History';
+                    viewHistoryBtn.innerHTML = '📜 View Consultation History';
                 }
             });
             
-            function displayPrescriptionHistory(prescriptions) {
-                if (!prescriptions || prescriptions.length === 0) {
-                    alert('📋 No prescription history found for this patient');
+            function displayConsultationHistory(consultations) {
+                if (!consultations || consultations.length === 0) {
+                    alert('📋 No consultation history found for this patient');
                     return;
                 }
                 
+                // Format date for tab display
+                function formatTabDate(dateStr) {
+                    const date = new Date(dateStr);
+                    const day = date.getDate();
+                    const month = date.toLocaleString('en-US', { month: 'short' });
+                    return `${day} ${month}`;
+                }
+                
+                // Create tabs HTML
+                let tabsHtml = '<div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">';
+                consultations.forEach((consultation, index) => {
+                    const tabDate = formatTabDate(consultation.consultation_date);
+                    const isActive = index === 0 ? 'active' : '';
+                    tabsHtml += `
+                        <button class="consultation-tab ${isActive}" data-index="${index}" 
+                                style="padding: 10px 20px; background: ${index === 0 ? '#667eea' : '#e9ecef'}; 
+                                color: ${index === 0 ? 'white' : '#333'}; border: none; border-radius: 8px; 
+                                cursor: pointer; font-weight: bold; transition: all 0.3s;">
+                            📅 ${tabDate}
+                        </button>
+                    `;
+                });
+                tabsHtml += '</div>';
+                
+                // Create content HTML
+                let contentHtml = '<div id="consultation-content">';
+                consultations.forEach((consultation, index) => {
+                    const fullDate = new Date(consultation.consultation_date).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    const isActive = index === 0 ? '' : 'style="display: none;"';
+                    
+                    contentHtml += `
+                        <div class="consultation-content-panel" data-index="${index}" ${isActive}>
+                            <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
+                                <h3 style="color: #667eea; margin-top: 0;">📅 ${fullDate}</h3>
+                                <p style="color: #666; font-size: 0.9em; margin: 5px 0;">
+                                    <strong>Consultation ID:</strong> ${consultation.consultation_id}
+                                </p>
+                            </div>
+                            
+                            <div style="background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px; padding: 20px; margin-bottom: 15px;">
+                                <h4 style="color: #856404; margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>📝</span> Consultation Transcript
+                                </h4>
+                                <div style="background: white; border-radius: 6px; padding: 15px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.9em; line-height: 1.6; white-space: pre-wrap; color: #333;">
+${consultation.transcript_text || 'No transcript available'}
+                                </div>
+                            </div>
+                            
+                            <div style="background: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 8px; padding: 20px;">
+                                <h4 style="color: #0c5460; margin-top: 0; display: flex; align-items: center; gap: 8px;">
+                                    <span>💊</span> Prescriptions
+                                </h4>
+                    `;
+                    
+                    if (consultation.prescriptions && consultation.prescriptions.length > 0) {
+                        contentHtml += '<div style="background: white; border-radius: 6px; padding: 15px;"><ul style="margin: 0; padding-left: 20px;">';
+                        consultation.prescriptions.forEach(med => {
+                            const medName = med.name || med.raw || med;
+                            const medDesc = med.description || '';
+                            const medScore = med.similarity_score || '';
+                            
+                            contentHtml += `
+                                <li style="margin-bottom: 10px; color: #333;">
+                                    <strong style="color: #667eea;">${medName}</strong>
+                                    ${medDesc ? `<br><span style="font-size: 0.9em; color: #666;">${medDesc}</span>` : ''}
+                                    ${medScore ? `<br><span style="font-size: 0.85em; color: #28a745;">Match: ${medScore}%</span>` : ''}
+                                </li>
+                            `;
+                        });
+                        contentHtml += '</ul></div>';
+                    } else {
+                        contentHtml += `
+                            <div style="background: #fff3cd; border-radius: 6px; padding: 15px; text-align: center;">
+                                <p style="color: #856404; margin: 0; font-style: italic;">
+                                    ⚠️ Prescription not yet filled by doctor
+                                </p>
+                                <small style="color: #666; display: block; margin-top: 5px;">
+                                    Doctor fills prescription after reviewing consultation
+                                </small>
+                            </div>
+                        `;
+                    }
+                    
+                    contentHtml += `
+                            </div>
+                        </div>
+                    `;
+                });
+                contentHtml += '</div>';
+                
                 let html = `
                     <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="history-modal">
-                        <div style="background: white; border-radius: 15px; max-width: 800px; max-height: 90vh; overflow-y: auto; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <div style="background: white; border-radius: 15px; max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #667eea; padding-bottom: 15px;">
-                                <h2 style="margin: 0; color: #667eea;">📜 Prescription History</h2>
+                                <h2 style="margin: 0; color: #667eea;">📋 Consultation History (${consultations.length} sessions)</h2>
                                 <button onclick="document.getElementById('history-modal').remove()" 
                                         style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold;">
                                     ✕ Close
                                 </button>
                             </div>
-                            <div style="display: flex; flex-direction: column; gap: 20px;">
-                `;
-                
-                prescriptions.reverse().forEach((prescription, index) => {
-                    const prescriptionNumber = prescriptions.length - index;
-                    html += `
-                        <div style="background: #f9f9f9; border-radius: 10px; padding: 20px; border-left: 4px solid #667eea;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <strong style="font-size: 1.1em; color: #333;">Prescription #${prescriptionNumber}</strong>
-                                <span style="color: #666; font-size: 0.9em;">📅 ${prescription.date}</span>
-                            </div>
-                            <div style="background: white; border-radius: 6px; padding: 15px;">
-                                <strong style="color: #667eea; display: block; margin-bottom: 10px;">Medicines:</strong>
-                                <ul style="margin: 0; padding-left: 20px; color: #333;">
-                    `;
-                    
-                    prescription.medicines.forEach(med => {
-                        html += `<li style="margin-bottom: 5px;">${med}</li>`;
-                    });
-                    
-                    html += `
-                                </ul>
-                            </div>
-                            <button onclick="loadPrescriptionToTextarea(${JSON.stringify(prescription.raw_text).replace(/"/g, '&quot;')})" 
-                                    style="margin-top: 10px; background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
-                                📋 Load to Prescription Pad
-                            </button>
-                        </div>
-                    `;
-                });
-                
-                html += `
-                            </div>
+                            ${tabsHtml}
+                            ${contentHtml}
                         </div>
                     </div>
                 `;
                 
                 // Add modal to page
                 document.body.insertAdjacentHTML('beforeend', html);
+                
+                // Add tab click handlers
+                document.querySelectorAll('.consultation-tab').forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        const index = this.getAttribute('data-index');
+                        
+                        // Update tab styles
+                        document.querySelectorAll('.consultation-tab').forEach(t => {
+                            t.style.background = '#e9ecef';
+                            t.style.color = '#333';
+                        });
+                        this.style.background = '#667eea';
+                        this.style.color = 'white';
+                        
+                        // Show corresponding content
+                        document.querySelectorAll('.consultation-content-panel').forEach(panel => {
+                            panel.style.display = 'none';
+                        });
+                        document.querySelector(`.consultation-content-panel[data-index="${index}"]`).style.display = 'block';
+                    });
+                });
             }
             
             // Global function to load prescription to textarea
@@ -762,7 +867,7 @@
                 
                 const html = `
                     <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="edit-modal">
-                        <div style="background: white; border-radius: 15px; max-width: 500px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+                        <div style="background: white; border-radius: 15px; max-width: 600px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #667eea; padding-bottom: 15px;">
                                 <h2 style="margin: 0; color: #667eea;">✏️ Edit Patient Information</h2>
                                 <button onclick="document.getElementById('edit-modal').remove()" 
@@ -782,8 +887,22 @@
                                            style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1em;">
                                 </div>
                                 <div>
+                                    <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">Gender</label>
+                                    <select id="edit-gender" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1em;">
+                                        <option value="">Select Gender</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div>
                                     <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">Contact Information</label>
                                     <input type="text" id="edit-contact" value="${contactValue}" placeholder="Phone, email, etc."
+                                           style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1em;">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">Insurance Information</label>
+                                    <input type="text" id="edit-insurance" placeholder="Insurance provider and policy number"
                                            style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 1em;">
                                 </div>
                                 <button type="submit" 
@@ -803,7 +922,9 @@
                     
                     const newName = document.getElementById('edit-name').value.trim();
                     const newDob = document.getElementById('edit-dob').value.trim();
+                    const newGender = document.getElementById('edit-gender').value.trim();
                     const newContact = document.getElementById('edit-contact').value.trim();
+                    const newInsurance = document.getElementById('edit-insurance').value.trim();
                     
                     if (!newName) {
                         alert('Patient name is required');
@@ -819,36 +940,19 @@
                             body: JSON.stringify({
                                 full_name: newName,
                                 date_of_birth: newDob,
-                                contact_info: newContact
+                                gender: newGender,
+                                contact_info: newContact,
+                                insurance_info: newInsurance
                             })
                         });
                         
                         const result = await response.json();
                         
                         if (result.success) {
-                            // Update the displayed information
-                            document.getElementById('patient-name').textContent = newName;
-                            document.getElementById('patient-dob').textContent = newDob || 'Not provided';
-                            document.getElementById('patient-contact').textContent = newContact || 'Not provided';
-                            
-                            if (!newDob) {
-                                document.getElementById('patient-dob').style.color = '#999';
-                                document.getElementById('patient-dob').style.fontStyle = 'italic';
-                            } else {
-                                document.getElementById('patient-dob').style.color = '';
-                                document.getElementById('patient-dob').style.fontStyle = '';
-                            }
-                            
-                            if (!newContact) {
-                                document.getElementById('patient-contact').style.color = '#999';
-                                document.getElementById('patient-contact').style.fontStyle = 'italic';
-                            } else {
-                                document.getElementById('patient-contact').style.color = '';
-                                document.getElementById('patient-contact').style.fontStyle = '';
-                            }
-                            
+                            alert('✅ Patient information updated successfully! Please refresh the page to see changes.');
                             document.getElementById('edit-modal').remove();
-                            alert('✅ Patient information updated successfully!');
+                            // Refresh the page to show updated info
+                            location.reload();
                         } else {
                             throw new Error(result.error || 'Failed to update patient');
                         }
@@ -964,6 +1068,10 @@
                 
                 if (result.success) {
                     console.log('✓ Processing successful:', result);
+                    
+                    // Store consultation ID for linking prescription later
+                    currentConsultationId = result.consultation_id;
+                    console.log('✓ Consultation ID stored:', currentConsultationId);
                     
                     // Update status
                     statusMessage.textContent = '✓ Processing complete! AI recommendations generated';
