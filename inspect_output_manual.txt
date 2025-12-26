@@ -1,0 +1,23 @@
+--- MEDICINES IN DB ---
+Total medicines: 55
+Paracetamol: Pain reliever and fever reducer
+Amoxicillin: Antibiotic for bacterial infections
+Ibuprofen: Anti-inflammatory pain reliever
+Metformin: Medication for type 2 diabetes
+Lisinopril: Medication for high blood pressure
+
+--- LATEST SESSION: data\sessions\P20251115043736314C ---
+--- MANUAL TEST: 'I have a severe headache and fever' ---
+
+--- KNOWLEDGE RECOMMENDER DEBUG ---
+Detected Symptoms: ['fever', 'headache']
+Looking for keywords: {'analgesic', 'pain relief', 'acetaminophen', 'antipyretic', 'aspirin', 'ibuprofen', 'paracetamol', 'migraine'}
+
+Non-zero matches:
+  Paracetamol -> 0.3333333333333333
+  Ibuprofen -> 0.3333333333333333
+  Ibuprofen 400mg -> 0.3333333333333333
+  Paracetamol 500mg -> 1.0
+  Aspirin 75mg -> 0.6666666666666666
+  Aspirin 325mg -> 0.3333333333333333
+  Tramadol 50mg -> 0.3333333333333333

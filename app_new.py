@@ -13,6 +13,10 @@ import os
 import json
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add ffmpeg to PATH if it exists in the project directory
 ffmpeg_bin = os.path.join(os.path.dirname(__file__), 'ffmpeg', 'bin')
@@ -241,6 +245,13 @@ def process_consultation_v2(patient_id):
             symptoms_text = transcript_data.get('transcript', '')
             logger.info(f"V2 Transcript length: {len(symptoms_text)}")
             
+            if not symptoms_text or len(symptoms_text.strip()) < 2:
+                logger.warning("Empty transcript detected")
+                return jsonify({
+                    'success': False, 
+                    'error': 'No speech detected in audio. Please check your microphone and speak clearly.'
+                }), 400
+            
             # --- Auto-Fill EHR Logic Start ---
             ehr_autofill = get_ehr_autofill()
             db = get_db()
@@ -255,10 +266,23 @@ def process_consultation_v2(patient_id):
                     if update_gender or update_insurance:
                          db.update_patient_info(patient_id, patient['full_name'], patient.get('date_of_birth'), patient.get('contact_info'), update_gender, update_insurance)
 
-                # 2. Extract clinical data and update EHR JSON
+                # 2. Extract clinical data using autofill_ehr
                 logger.info("Extracting clinical entities...")
-                clinical_data = ehr_autofill.extract_clinical_data(symptoms_text)
-                db.update_patient_ehr(patient_id, clinical_data)
+                try:
+                    current_ehr = json.loads(patient['ehr_data']) if patient.get('ehr_data') else {}
+                except:
+                    current_ehr = {}
+                    
+                # Use module's implementation
+                updated_ehr = ehr_autofill.autofill_ehr(transcript_path, current_ehr)
+                
+                # Convert back to string for database
+                if isinstance(updated_ehr, dict):
+                    updated_ehr_str = json.dumps(updated_ehr)
+                else:
+                    updated_ehr_str = updated_ehr
+                    
+                db.update_patient_ehr(patient_id, updated_ehr_str)
             # --- Auto-Fill EHR Logic End ---
             
             # Step 4: Generate HYBRID AI recommendations
@@ -268,9 +292,22 @@ def process_consultation_v2(patient_id):
             ensemble.set_database(db)
             recommendations = ensemble.get_recommendations(symptoms_text, all_medicines, top_n=5)
             
-            # Step 5: Add XAI
+            # Step 5: Add XAI explanations with LIME scoring
+            logger.info("Generating XAI explanations...")
+            
+            # Create a localized scoring function for LIME
+            def lime_scorer(s, meds):
+                # Use ensemble to get scores for these specific medicines under new symptoms
+                res = ensemble.get_recommendations(s, meds)
+                # Map back to scores in same order as meds
+                scores = []
+                for m in meds:
+                    score = next((r.get('final_score', 0) for r in res if r['name'] == m['name']), 0)
+                    scores.append(float(score))
+                return scores
+
             xai = get_xai_engine()
-            explained_recs = xai.explain_batch(symptoms_text, recommendations)
+            explained_recs = xai.explain_batch(symptoms_text, recommendations, recommender_func=lime_scorer)
             
             # Step 6: Format Output
             formatted_recs = []

@@ -1,0 +1,23 @@
+--- MEDICINES IN DB ---
+Total medicines: 55
+Paracetamol: Analgesic and antipyretic agent used for the relief of mild to moderate pain, headache, and fever.
+Amoxicillin: Penicillin antibiotic used to treat bacterial infections such as pneumonia, bronchitis, ear infections, and skin infections.
+Ibuprofen: Non-steroidal anti-inflammatory drug (NSAID) used for treating pain, fever, and inflammation including headache, toothache, and back pain.
+Metformin: Biguanide medication used to treat type 2 diabetes by lowering blood sugar levels and improving insulin sensitivity.
+Lisinopril: ACE inhibitor used to treat high blood pressure and heart failure.
+
+--- LATEST SESSION: data\sessions\P20251115043736314C ---
+--- MANUAL TEST: 'I have a severe headache and fever' ---
+
+--- KNOWLEDGE RECOMMENDER DEBUG ---
+Detected Symptoms: ['fever', 'headache']
+Looking for keywords: {'aspirin', 'ibuprofen', 'antipyretic', 'migraine', 'pain relief', 'analgesic', 'paracetamol', 'acetaminophen'}
+
+Non-zero matches:
+  Paracetamol -> 1.0
+  Ibuprofen -> 0.3333333333333333
+  Ibuprofen 400mg -> 0.3333333333333333
+  Paracetamol 500mg -> 1.0
+  Aspirin 75mg -> 0.3333333333333333
+  Aspirin 325mg -> 0.3333333333333333
+  Tramadol 50mg -> 0.3333333333333333

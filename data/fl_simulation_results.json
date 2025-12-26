@@ -1,0 +1,109 @@
+{
+  "simulation_complete": true,
+  "timestamp": "2025-12-27T02:28:11.029695",
+  "duration_seconds": 0.022654,
+  "config": {
+    "num_rounds": 3,
+    "min_clients": 2,
+    "fraction_fit": 0.5,
+    "local_epochs": 1,
+    "batch_size": 32,
+    "learning_rate": 0.001,
+    "whisper_model": "base",
+    "freeze_encoder": true,
+    "num_simulated_clients": 3,
+    "data_split": "iid",
+    "verbose": false,
+    "log_interval": 1
+  },
+  "num_clients": 3,
+  "total_rounds": 3,
+  "rounds": [
+    {
+      "round": 1,
+      "num_clients": 2,
+      "participating_clients": [
+        "Hospital_B",
+        "Hospital_C"
+      ],
+      "avg_loss": 0.1411,
+      "avg_wer": 0.148,
+      "duration_ms": 5.345,
+      "client_metrics": [
+        {
+          "client_id": "Hospital_B",
+          "loss": 0.1115,
+          "wer": 0.1919,
+          "samples_used": 59,
+          "epochs": 1
+        },
+        {
+          "client_id": "Hospital_C",
+          "loss": 0.1707,
+          "wer": 0.1042,
+          "samples_used": 128,
+          "epochs": 1
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "num_clients": 2,
+      "participating_clients": [
+        "Hospital_C",
+        "Hospital_A"
+      ],
+      "avg_loss": 0.219,
+      "avg_wer": 0.2181,
+      "duration_ms": 4.423,
+      "client_metrics": [
+        {
+          "client_id": "Hospital_C",
+          "loss": 0.1402,
+          "wer": 0.1795,
+          "samples_used": 128,
+          "epochs": 1
+        },
+        {
+          "client_id": "Hospital_A",
+          "loss": 0.2978,
+          "wer": 0.2567,
+          "samples_used": 174,
+          "epochs": 1
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "num_clients": 2,
+      "participating_clients": [
+        "Hospital_B",
+        "Hospital_C"
+      ],
+      "avg_loss": 0.2794,
+      "avg_wer": 0.2838,
+      "duration_ms": 10.404,
+      "client_metrics": [
+        {
+          "client_id": "Hospital_B",
+          "loss": 0.2857,
+          "wer": 0.2973,
+          "samples_used": 59,
+          "epochs": 1
+        },
+        {
+          "client_id": "Hospital_C",
+          "loss": 0.273,
+          "wer": 0.2703,
+          "samples_used": 128,
+          "epochs": 1
+        }
+      ]
+    }
+  ],
+  "final_metrics": {
+    "avg_loss": 0.2132,
+    "avg_wer": 0.2166,
+    "loss_improvement": -0.1383
+  }
+}

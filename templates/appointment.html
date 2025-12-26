@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,14 +11,14 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -26,7 +27,7 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             overflow: hidden;
         }
-        
+
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -35,18 +36,18 @@
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .header-left h1 {
             font-size: 2em;
             margin-bottom: 5px;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
         }
-        
+
         .header-left p {
             font-size: 1em;
             opacity: 0.9;
         }
-        
+
         .back-link {
             background: rgba(255, 255, 255, 0.2);
             color: white;
@@ -56,25 +57,25 @@
             font-weight: bold;
             transition: background 0.2s;
         }
-        
+
         .back-link:hover {
             background: rgba(255, 255, 255, 0.3);
         }
-        
+
         .back-link::before {
             content: '← ';
         }
-        
+
         .content {
             padding: 30px 40px;
         }
-        
+
         .layout {
             display: grid;
             grid-template-columns: 350px 1fr;
             gap: 30px;
         }
-        
+
         /* Left Column - Patient Info */
         .patient-info-section {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -82,7 +83,7 @@
             padding: 25px;
             border-left: 5px solid #667eea;
         }
-        
+
         .section-title {
             font-size: 1.5em;
             color: #333;
@@ -91,14 +92,14 @@
             align-items: center;
             gap: 10px;
         }
-        
+
         .patient-detail {
             margin-bottom: 15px;
             padding: 12px;
             background: white;
             border-radius: 8px;
         }
-        
+
         .patient-detail label {
             display: block;
             font-weight: bold;
@@ -106,25 +107,25 @@
             font-size: 0.9em;
             margin-bottom: 5px;
         }
-        
+
         .patient-detail-value {
             color: #333;
             font-size: 1.1em;
         }
-        
+
         .ehr-data-section {
             margin-top: 25px;
             background: white;
             border-radius: 8px;
             padding: 15px;
         }
-        
+
         .ehr-data-section h3 {
             color: #667eea;
             font-size: 1.2em;
             margin-bottom: 10px;
         }
-        
+
         .ehr-content {
             background: #f9f9f9;
             border: 2px dashed #e0e0e0;
@@ -136,33 +137,33 @@
             max-height: 300px;
             overflow-y: auto;
         }
-        
+
         .ehr-empty {
             text-align: center;
             color: #999;
             font-style: italic;
         }
-        
+
         /* Right Column - Consultation & Prescription */
         .main-section {
             display: flex;
             flex-direction: column;
             gap: 25px;
         }
-        
+
         .card {
             background: #f9f9f9;
             border-radius: 12px;
             padding: 25px;
             border: 2px solid #e0e0e0;
         }
-        
+
         .consultation-controls {
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
-        
+
         .recording-btn {
             padding: 20px 40px;
             border: none;
@@ -176,46 +177,46 @@
             justify-content: center;
             gap: 15px;
         }
-        
+
         .btn-start-recording {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
             box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
         }
-        
+
         .btn-start-recording:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
         }
-        
+
         .btn-start-recording:disabled {
             background: #ccc;
             cursor: not-allowed;
             box-shadow: none;
         }
-        
+
         .btn-stop-recording {
             background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             color: white;
             box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
             display: none;
         }
-        
+
         .btn-stop-recording:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6);
         }
-        
+
         .btn-icon {
             font-size: 1.5em;
         }
-        
+
         .prescription-section {
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
-        
+
         .ai-recommendations {
             background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
             border: 2px solid #667eea;
@@ -223,7 +224,7 @@
             padding: 20px;
             min-height: 150px;
         }
-        
+
         .ai-recommendations h3 {
             color: #667eea;
             font-size: 1.2em;
@@ -232,19 +233,19 @@
             align-items: center;
             gap: 10px;
         }
-        
+
         .ai-recommendations-content {
             color: #666;
             font-style: italic;
             text-align: center;
             padding: 30px;
         }
-        
+
         .manual-search {
             display: flex;
             gap: 10px;
         }
-        
+
         .search-input {
             flex: 1;
             padding: 12px 15px;
@@ -253,12 +254,12 @@
             font-size: 1em;
             transition: border-color 0.3s;
         }
-        
+
         .search-input:focus {
             outline: none;
             border-color: #667eea;
         }
-        
+
         .btn-search {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -269,11 +270,11 @@
             cursor: pointer;
             transition: transform 0.2s;
         }
-        
+
         .btn-search:hover {
             transform: translateY(-2px);
         }
-        
+
         .prescription-area {
             width: 100%;
             min-height: 200px;
@@ -284,25 +285,25 @@
             font-size: 1em;
             resize: vertical;
         }
-        
+
         .prescription-area:focus {
             outline: none;
             border-color: #667eea;
         }
-        
+
         .alert {
             padding: 15px 20px;
             border-radius: 8px;
             margin-bottom: 20px;
             font-weight: 500;
         }
-        
+
         .alert-info {
             background: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
         }
-        
+
         .status-indicator {
             display: inline-block;
             padding: 8px 15px;
@@ -311,18 +312,203 @@
             font-weight: bold;
             margin-bottom: 15px;
         }
-        
+
         .status-ready {
             background: #d4edda;
             color: #155724;
         }
-        
+
         .status-disabled {
             background: #f8d7da;
             color: #721c24;
         }
+
+        /* New styles for hybrid recommendation */
+        .voting-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .voting-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8em;
+        }
+
+        .voting-bar-label {
+            width: 80px;
+            color: #666;
+            text-transform: capitalize;
+        }
+
+        .voting-bar-track {
+            flex: 1;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .voting-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .voting-bar-fill.semantic {
+            background: #667eea;
+        }
+
+        .voting-bar-fill.tfidf {
+            background: #28a745;
+        }
+
+        .voting-bar-fill.knowledge {
+            background: #ffc107;
+        }
+
+        .voting-bar-fill.collaborative {
+            background: #17a2b8;
+        }
+
+        .explanation-card {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f4f8 100%);
+            border: 1px solid #c3d4e8;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 0.85em;
+        }
+
+        .explanation-reason {
+            color: #4a5568;
+            font-style: italic;
+        }
+
+        .explanation-symptoms {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 6px;
+        }
+
+        .symptom-tag {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
+        .model-weights-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            color: white;
+        }
+
+        .model-weights-panel h4 {
+            margin: 0 0 10px 0;
+            font-size: 1em;
+        }
+
+        .weights-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .weight-item {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+
+        .fl-panel {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            color: white;
+        }
+
+        .fl-panel h4 {
+            margin: 0 0 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .fl-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .fl-metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .fl-metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .fl-metric-label {
+            font-size: 0.75em;
+            color: #a0a0a0;
+        }
+
+        .btn-run-fl {
+            margin-top: 10px;
+            width: 100%;
+            padding: 10px;
+            background: #00ff88;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-run-fl:hover {
+            transform: translateY(-2px);
+        }
+
+        .explain-toggle {
+            background: none;
+            border: 1px solid #667eea;
+            color: #667eea;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        .explain-toggle:hover {
+            background: #667eea;
+            color: white;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -332,23 +518,23 @@
             </div>
             <a href="/" class="back-link">Back to Dashboard</a>
         </div>
-        
+
         <div class="content">
             <div class="layout">
                 <!-- Left Column: Patient Information -->
                 <div class="patient-info-section">
                     <h2 class="section-title">👤 Patient Information</h2>
-                    
+
                     <div class="patient-detail">
                         <label>Full Name</label>
                         <div class="patient-detail-value" id="patient-name">{{ patient.full_name }}</div>
                     </div>
-                    
+
                     <div class="patient-detail">
                         <label>Patient ID</label>
                         <div class="patient-detail-value">{{ patient.patient_id }}</div>
                     </div>
-                    
+
                     {% if patient.date_of_birth %}
                     <div class="patient-detail">
                         <label>Date of Birth</label>
@@ -357,10 +543,11 @@
                     {% else %}
                     <div class="patient-detail">
                         <label>Date of Birth</label>
-                        <div class="patient-detail-value" id="patient-dob" style="color: #999; font-style: italic;">Not provided</div>
+                        <div class="patient-detail-value" id="patient-dob" style="color: #999; font-style: italic;">Not
+                            provided</div>
                     </div>
                     {% endif %}
-                    
+
                     {% if patient.contact_info %}
                     <div class="patient-detail">
                         <label>Contact Information</label>
@@ -369,123 +556,145 @@
                     {% else %}
                     <div class="patient-detail">
                         <label>Contact Information</label>
-                        <div class="patient-detail-value" id="patient-contact" style="color: #999; font-style: italic;">Not provided</div>
+                        <div class="patient-detail-value" id="patient-contact" style="color: #999; font-style: italic;">
+                            Not provided</div>
                     </div>
                     {% endif %}
-                    
-                    <button 
-                        id="btn-edit-patient" 
+
+                    <button id="btn-edit-patient"
                         style="margin-top: 15px; width: 100%; padding: 12px; background: #ffc107; color: #333; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: transform 0.2s;"
                         onmouseover="this.style.transform='translateY(-2px)'"
-                        onmouseout="this.style.transform='translateY(0)'"
-                    >
+                        onmouseout="this.style.transform='translateY(0)'">
                         ✏️ Edit Patient Info
                     </button>
-                    
+
                     <div class="ehr-data-section">
                         <h3>📋 Current EHR Data</h3>
                         <div class="ehr-content">
                             {% if patient.ehr_data and patient.ehr_data != '{}' %}
-                                <pre>{{ patient.ehr_data }}</pre>
+                            <pre>{{ patient.ehr_data }}</pre>
                             {% else %}
-                                <div class="ehr-empty">No EHR data recorded yet</div>
+                            <div class="ehr-empty">No EHR data recorded yet</div>
                             {% endif %}
                         </div>
-                        <button 
-                            id="btn-view-ehr" 
-                            onclick="window.location.href='/ehr_report/{{ patient.patient_id }}'"
+                        <button id="btn-view-ehr" onclick="window.location.href='/ehr_report/{{ patient.patient_id }}'"
                             style="margin-top: 15px; width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: transform 0.2s;"
                             onmouseover="this.style.transform='translateY(-2px)'"
-                            onmouseout="this.style.transform='translateY(0)'"
-                        >
+                            onmouseout="this.style.transform='translateY(0)'">
                             📋 View Full EHR Report
                         </button>
-                        <button 
-                            id="btn-view-history" 
+                        <button id="btn-view-history"
                             style="margin-top: 15px; width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: transform 0.2s;"
                             onmouseover="this.style.transform='translateY(-2px)'"
-                            onmouseout="this.style.transform='translateY(0)'"
-                        >
+                            onmouseout="this.style.transform='translateY(0)'">
                             📜 View Consultation History
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Right Column: Consultation & Prescription -->
                 <div class="main-section">
                     <!-- Consultation Controls -->
                     <div class="card">
                         <h2 class="section-title">🎙️ Consultation Recording</h2>
-                        
+
                         <div id="status-message" class="alert alert-info">
                             <strong>ℹ️ Status:</strong> <span id="recording-status">Ready to start consultation</span>
                         </div>
-                        
+
                         <div class="consultation-controls">
-                            <button 
-                                id="btn-start-recording" 
-                                class="recording-btn btn-start-recording" 
-                                disabled
-                            >
+                            <button id="btn-start-recording" class="recording-btn btn-start-recording" disabled>
                                 <span class="btn-icon">🎤</span>
                                 <span>Start Recording</span>
                             </button>
-                            
-                            <button 
-                                id="btn-stop-recording" 
-                                class="recording-btn btn-stop-recording"
-                            >
+
+                            <button id="btn-stop-recording" class="recording-btn btn-stop-recording">
                                 <span class="btn-icon">⏹️</span>
                                 <span>Stop Recording & Process</span>
                             </button>
                         </div>
                     </div>
-                    
+
                     <!-- Prescription Pad -->
                     <div class="card prescription-section">
                         <h2 class="section-title">💊 Prescription</h2>
-                        
+
+                        <!-- Model Weights Panel -->
+                        <div class="model-weights-panel" id="weights-panel">
+                            <h4>⚖️ Ensemble Model Weights</h4>
+                            <div class="weights-grid" id="weights-grid">
+                                <div class="weight-item"><span>Semantic</span><span id="w-semantic">25%</span></div>
+                                <div class="weight-item"><span>TF-IDF</span><span id="w-tfidf">25%</span></div>
+                                <div class="weight-item"><span>Knowledge</span><span id="w-knowledge">25%</span></div>
+                                <div class="weight-item"><span>Collaborative</span><span id="w-collaborative">25%</span>
+                                </div>
+                            </div>
+                            <small style="opacity: 0.7; margin-top: 8px; display: block;">Weights adjust automatically
+                                based on your selections</small>
+                        </div>
+
                         <!-- AI Recommendations -->
                         <div class="ai-recommendations">
-                            <h3>🤖 AI Recommendations</h3>
+                            <h3>🤖 Hybrid AI Recommendations</h3>
                             <div class="ai-recommendations-content" id="ai-recommendations">
                                 AI recommendations will appear here after consultation recording is processed
                             </div>
                         </div>
-                        
+
+                        <!-- Federated Learning Panel -->
+                        <div class="fl-panel" id="fl-panel">
+                            <h4>🔗 Federated Learning Status</h4>
+                            <p style="font-size: 0.85em; color: #a0a0a0; margin: 0 0 10px 0;">
+                                Privacy-preserving model training across hospitals
+                            </p>
+                            <div class="fl-metrics" id="fl-metrics">
+                                <div class="fl-metric">
+                                    <div class="fl-metric-value" id="fl-rounds">-</div>
+                                    <div class="fl-metric-label">Rounds</div>
+                                </div>
+                                <div class="fl-metric">
+                                    <div class="fl-metric-value" id="fl-clients">-</div>
+                                    <div class="fl-metric-label">Clients</div>
+                                </div>
+                                <div class="fl-metric">
+                                    <div class="fl-metric-value" id="fl-loss">-</div>
+                                    <div class="fl-metric-label">Avg Loss</div>
+                                </div>
+                                <div class="fl-metric">
+                                    <div class="fl-metric-value" id="fl-wer">-</div>
+                                    <div class="fl-metric-label">WER</div>
+                                </div>
+                            </div>
+                            <button class="btn-run-fl" id="btn-run-fl">
+                                🚀 Run FL Simulation
+                            </button>
+                        </div>
+
                         <!-- Manual Medicine Search -->
                         <div>
                             <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
                                 🔍 Search and Add Medicine Manually
                             </label>
                             <div class="manual-search">
-                                <input 
-                                    type="text" 
-                                    class="search-input" 
-                                    placeholder="Search for medicine by name..."
-                                    id="medicine-search"
-                                >
+                                <input type="text" class="search-input" placeholder="Search for medicine by name..."
+                                    id="medicine-search">
                                 <button class="btn-search" id="btn-search-medicine">Search</button>
                             </div>
                             <div id="search-results" style="margin-top: 15px;"></div>
                         </div>
-                        
+
                         <!-- Final Prescription Text Area -->
                         <div>
                             <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">
                                 📝 Final Prescription
                             </label>
-                            <textarea 
-                                class="prescription-area" 
+                            <textarea class="prescription-area"
                                 placeholder="Final prescription list will appear here...&#10;&#10;You can also manually edit or add medications here."
-                                id="prescription-text"
-                            ></textarea>
-                            <button 
-                                id="btn-save-prescription" 
+                                id="prescription-text"></textarea>
+                            <button id="btn-save-prescription"
                                 style="margin-top: 15px; width: 100%; padding: 15px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 8px; font-size: 1.1em; font-weight: bold; cursor: pointer; transition: transform 0.2s;"
                                 onmouseover="this.style.transform='translateY(-2px)'"
-                                onmouseout="this.style.transform='translateY(0)'"
-                            >
+                                onmouseout="this.style.transform='translateY(0)'">
                                 💾 Save Prescription
                             </button>
                         </div>
@@ -494,18 +703,18 @@
             </div>
         </div>
     </div>
-    
+
     <script>
         // Track current consultation ID (set when consultation is processed)
         let currentConsultationId = null;
-        
+
         // Patient data validation and button enablement
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Get patient name element
             const patientNameElement = document.getElementById('patient-name');
             const startRecordingBtn = document.getElementById('btn-start-recording');
             const recordingStatus = document.getElementById('recording-status');
-            
+
             // Check if patient name is present
             if (patientNameElement && patientNameElement.textContent.trim() !== '') {
                 // Patient info is valid, enable the Start Recording button
@@ -514,7 +723,7 @@
                 recordingStatus.textContent = 'System ready - Click "Start Recording" to begin consultation';
                 recordingStatus.parentElement.classList.remove('alert-info');
                 recordingStatus.parentElement.classList.add('alert', 'alert-info');
-                
+
                 console.log('✓ Patient information validated');
                 console.log('✓ Start Recording button enabled');
             } else {
@@ -523,34 +732,34 @@
                 recordingStatus.textContent = 'Patient information incomplete - Cannot start recording';
                 console.warn('⚠️ Patient information missing or incomplete');
             }
-            
+
             // Medicine search functionality
             const searchBtn = document.getElementById('btn-search-medicine');
             const searchInput = document.getElementById('medicine-search');
             const searchResults = document.getElementById('search-results');
-            
+
             // Search on button click
-            searchBtn.addEventListener('click', async function() {
+            searchBtn.addEventListener('click', async function () {
                 await searchMedicines();
             });
-            
+
             // Search on Enter key
-            searchInput.addEventListener('keypress', async function(e) {
+            searchInput.addEventListener('keypress', async function (e) {
                 if (e.key === 'Enter') {
                     await searchMedicines();
                 }
             });
-            
+
             async function searchMedicines() {
                 const searchTerm = searchInput.value.trim();
-                
+
                 if (!searchTerm) {
                     alert('Please enter a medicine name to search');
                     return;
                 }
-                
+
                 searchResults.innerHTML = '<div style="text-align: center; padding: 15px; color: #666;">🔍 Searching...</div>';
-                
+
                 try {
                     const response = await fetch('/search_medicine', {
                         method: 'POST',
@@ -559,9 +768,9 @@
                         },
                         body: JSON.stringify({ search_term: searchTerm })
                     });
-                    
+
                     const result = await response.json();
-                    
+
                     if (result.success && result.medicines.length > 0) {
                         displaySearchResults(result.medicines);
                     } else if (result.success && result.medicines.length === 0) {
@@ -582,15 +791,15 @@
                     `;
                 }
             }
-            
+
             function displaySearchResults(medicines) {
                 let html = '<div style="background: #f9f9f9; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; max-height: 300px; overflow-y: auto;">';
                 html += `<div style="font-weight: bold; margin-bottom: 10px; color: #667eea;">Found ${medicines.length} medicine(s):</div>`;
-                
+
                 medicines.forEach((med, index) => {
                     const stockWarning = med.stock_level < 10 ? ' ⚠️ Low Stock' : '';
                     const stockColor = med.stock_level < 10 ? '#dc3545' : '#28a745';
-                    
+
                     html += `
                         <div style="background: white; border-radius: 6px; padding: 12px; margin-bottom: 10px; border-left: 3px solid #667eea;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
@@ -609,59 +818,59 @@
                         </div>
                     `;
                 });
-                
+
                 html += '</div>';
                 searchResults.innerHTML = html;
             }
-            
+
             // Save prescription functionality
             const savePrescriptionBtn = document.getElementById('btn-save-prescription');
             const prescriptionTextArea = document.getElementById('prescription-text');
-            
-            savePrescriptionBtn.addEventListener('click', async function() {
+
+            savePrescriptionBtn.addEventListener('click', async function () {
                 const prescriptionText = prescriptionTextArea.value.trim();
-                
+
                 if (!prescriptionText) {
                     alert('Please add medicines to the prescription before saving');
                     return;
                 }
-                
+
                 if (!confirm('Are you sure you want to save this prescription?')) {
                     return;
                 }
-                
+
                 // Disable button and show loading
                 savePrescriptionBtn.disabled = true;
                 savePrescriptionBtn.innerHTML = '⏳ Saving...';
-                
+
                 try {
                     const response = await fetch(`/save_prescription/${patientId}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ 
+                        body: JSON.stringify({
                             prescription: prescriptionText,
                             consultation_id: currentConsultationId  // Link to current consultation
                         })
                     });
-                    
+
                     const result = await response.json();
-                    
+
                     if (result.success) {
                         alert('✅ Prescription saved successfully!');
                         console.log('Prescription saved and linked to consultation:', currentConsultationId);
-                        
+
                         // Clear prescription text area
                         prescriptionTextArea.value = '';
-                        
+
                         // Clear search results and AI recommendations
                         searchResults.innerHTML = '';
                         document.getElementById('ai-recommendations').innerHTML = 'AI recommendations will appear here after consultation recording is processed';
-                        
+
                         // Clear consultation ID after saving
                         currentConsultationId = null;
-                        
+
                     } else {
                         throw new Error(result.error || 'Failed to save prescription');
                     }
@@ -674,19 +883,19 @@
                     savePrescriptionBtn.innerHTML = '💾 Save Prescription';
                 }
             });
-            
+
             // View consultation history functionality
             const viewHistoryBtn = document.getElementById('btn-view-history');
-            
-            viewHistoryBtn.addEventListener('click', async function() {
+
+            viewHistoryBtn.addEventListener('click', async function () {
                 // Disable button and show loading
                 viewHistoryBtn.disabled = true;
                 viewHistoryBtn.innerHTML = '⏳ Loading...';
-                
+
                 try {
                     const response = await fetch(`/consultation_history/${patientId}`);
                     const result = await response.json();
-                    
+
                     if (result.success) {
                         displayConsultationHistory(result.consultations);
                     } else {
@@ -701,13 +910,13 @@
                     viewHistoryBtn.innerHTML = '📜 View Consultation History';
                 }
             });
-            
+
             function displayConsultationHistory(consultations) {
                 if (!consultations || consultations.length === 0) {
                     alert('📋 No consultation history found for this patient');
                     return;
                 }
-                
+
                 // Format date for tab display
                 function formatTabDate(dateStr) {
                     const date = new Date(dateStr);
@@ -715,7 +924,7 @@
                     const month = date.toLocaleString('en-US', { month: 'short' });
                     return `${day} ${month}`;
                 }
-                
+
                 // Create tabs HTML
                 let tabsHtml = '<div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">';
                 consultations.forEach((consultation, index) => {
@@ -731,7 +940,7 @@
                     `;
                 });
                 tabsHtml += '</div>';
-                
+
                 // Create content HTML
                 let contentHtml = '<div id="consultation-content">';
                 consultations.forEach((consultation, index) => {
@@ -742,9 +951,9 @@
                         hour: '2-digit',
                         minute: '2-digit'
                     });
-                    
+
                     const isActive = index === 0 ? '' : 'style="display: none;"';
-                    
+
                     contentHtml += `
                         <div class="consultation-content-panel" data-index="${index}" ${isActive}>
                             <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin-bottom: 15px;">
@@ -768,14 +977,14 @@ ${consultation.transcript_text || 'No transcript available'}
                                     <span>💊</span> Prescriptions
                                 </h4>
                     `;
-                    
+
                     if (consultation.prescriptions && consultation.prescriptions.length > 0) {
                         contentHtml += '<div style="background: white; border-radius: 6px; padding: 15px;"><ul style="margin: 0; padding-left: 20px;">';
                         consultation.prescriptions.forEach(med => {
                             const medName = med.name || med.raw || med;
                             const medDesc = med.description || '';
                             const medScore = med.similarity_score || '';
-                            
+
                             contentHtml += `
                                 <li style="margin-bottom: 10px; color: #333;">
                                     <strong style="color: #667eea;">${medName}</strong>
@@ -797,14 +1006,14 @@ ${consultation.transcript_text || 'No transcript available'}
                             </div>
                         `;
                     }
-                    
+
                     contentHtml += `
                             </div>
                         </div>
                     `;
                 });
                 contentHtml += '</div>';
-                
+
                 let html = `
                     <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="history-modal">
                         <div style="background: white; border-radius: 15px; max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
@@ -820,15 +1029,15 @@ ${consultation.transcript_text || 'No transcript available'}
                         </div>
                     </div>
                 `;
-                
+
                 // Add modal to page
                 document.body.insertAdjacentHTML('beforeend', html);
-                
+
                 // Add tab click handlers
                 document.querySelectorAll('.consultation-tab').forEach(tab => {
-                    tab.addEventListener('click', function() {
+                    tab.addEventListener('click', function () {
                         const index = this.getAttribute('data-index');
-                        
+
                         // Update tab styles
                         document.querySelectorAll('.consultation-tab').forEach(t => {
                             t.style.background = '#e9ecef';
@@ -836,7 +1045,7 @@ ${consultation.transcript_text || 'No transcript available'}
                         });
                         this.style.background = '#667eea';
                         this.style.color = 'white';
-                        
+
                         // Show corresponding content
                         document.querySelectorAll('.consultation-content-panel').forEach(panel => {
                             panel.style.display = 'none';
@@ -845,26 +1054,26 @@ ${consultation.transcript_text || 'No transcript available'}
                     });
                 });
             }
-            
+
             // Global function to load prescription to textarea
-            window.loadPrescriptionToTextarea = function(prescriptionText) {
+            window.loadPrescriptionToTextarea = function (prescriptionText) {
                 document.getElementById('prescription-text').value = prescriptionText;
                 document.getElementById('history-modal').remove();
                 alert('✅ Prescription loaded to prescription pad');
             };
-            
+
             // Edit patient information functionality
             const editPatientBtn = document.getElementById('btn-edit-patient');
-            
-            editPatientBtn.addEventListener('click', function() {
+
+            editPatientBtn.addEventListener('click', function () {
                 const currentName = document.getElementById('patient-name').textContent;
                 const currentDob = document.getElementById('patient-dob').textContent;
                 const currentContact = document.getElementById('patient-contact').textContent;
-                
+
                 // Clean up "Not provided" text
                 const dobValue = currentDob === 'Not provided' ? '' : currentDob;
                 const contactValue = currentContact === 'Not provided' ? '' : currentContact;
-                
+
                 const html = `
                     <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 9999;" id="edit-modal">
                         <div style="background: white; border-radius: 15px; max-width: 600px; padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
@@ -913,24 +1122,24 @@ ${consultation.transcript_text || 'No transcript available'}
                         </div>
                     </div>
                 `;
-                
+
                 document.body.insertAdjacentHTML('beforeend', html);
-                
+
                 // Add form submit handler
-                document.getElementById('edit-patient-form').addEventListener('submit', async function(e) {
+                document.getElementById('edit-patient-form').addEventListener('submit', async function (e) {
                     e.preventDefault();
-                    
+
                     const newName = document.getElementById('edit-name').value.trim();
                     const newDob = document.getElementById('edit-dob').value.trim();
                     const newGender = document.getElementById('edit-gender').value.trim();
                     const newContact = document.getElementById('edit-contact').value.trim();
                     const newInsurance = document.getElementById('edit-insurance').value.trim();
-                    
+
                     if (!newName) {
                         alert('Patient name is required');
                         return;
                     }
-                    
+
                     try {
                         const response = await fetch(`/update_patient/${patientId}`, {
                             method: 'POST',
@@ -945,9 +1154,9 @@ ${consultation.transcript_text || 'No transcript available'}
                                 insurance_info: newInsurance
                             })
                         });
-                        
+
                         const result = await response.json();
-                        
+
                         if (result.success) {
                             alert('✅ Patient information updated successfully! Please refresh the page to see changes.');
                             document.getElementById('edit-modal').remove();
@@ -964,54 +1173,54 @@ ${consultation.transcript_text || 'No transcript available'}
             });
         });
     </script>
-    
+
     <script>
         // Audio recording functionality
         let mediaRecorder;
         let audioChunks = [];
         let recordingStartTime;
         const patientId = "{{ patient.patient_id }}";
-        
+
         // Get DOM elements
         const startBtn = document.getElementById('btn-start-recording');
         const stopBtn = document.getElementById('btn-stop-recording');
         const statusMessage = document.getElementById('recording-status');
         const aiRecommendations = document.getElementById('ai-recommendations');
         const prescriptionText = document.getElementById('prescription-text');
-        
+
         // Start Recording
-        startBtn.addEventListener('click', async function() {
+        startBtn.addEventListener('click', async function () {
             if (this.disabled) return;
-            
+
             try {
                 // Request microphone access
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                
+
                 // Initialize MediaRecorder
                 mediaRecorder = new MediaRecorder(stream);
                 audioChunks = [];
-                
+
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
                         audioChunks.push(event.data);
                     }
                 };
-                
+
                 mediaRecorder.onstop = async () => {
                     // Stop all audio tracks
                     stream.getTracks().forEach(track => track.stop());
-                    
+
                     // Create audio blob
                     const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    
+
                     // Upload and process
                     await uploadAndProcess(audioBlob);
                 };
-                
+
                 // Start recording
                 mediaRecorder.start();
                 recordingStartTime = Date.now();
-                
+
                 // Update UI
                 startBtn.style.display = 'none';
                 stopBtn.style.display = 'flex';
@@ -1019,24 +1228,24 @@ ${consultation.transcript_text || 'No transcript available'}
                 statusMessage.parentElement.style.background = '#fff3cd';
                 statusMessage.parentElement.style.borderColor = '#ffc107';
                 statusMessage.parentElement.style.color = '#856404';
-                
+
                 console.log('✓ Recording started');
-                
+
             } catch (error) {
                 console.error('Error accessing microphone:', error);
                 alert('Error accessing microphone. Please ensure you have granted microphone permissions.');
                 statusMessage.textContent = 'Error: Could not access microphone';
             }
         });
-        
+
         // Stop Recording
-        stopBtn.addEventListener('click', function() {
+        stopBtn.addEventListener('click', function () {
             if (mediaRecorder && mediaRecorder.state === 'recording') {
                 const recordingDuration = Math.round((Date.now() - recordingStartTime) / 1000);
                 console.log(`Recording stopped. Duration: ${recordingDuration}s`);
-                
+
                 mediaRecorder.stop();
-                
+
                 // Update UI
                 stopBtn.style.display = 'none';
                 startBtn.style.display = 'flex';
@@ -1047,56 +1256,61 @@ ${consultation.transcript_text || 'No transcript available'}
                 statusMessage.parentElement.style.color = '#0c5460';
             }
         });
-        
+
         // Upload and Process Audio
         async function uploadAndProcess(audioBlob) {
             try {
                 // Create FormData
                 const formData = new FormData();
                 formData.append('audio', audioBlob, `consultation_${patientId}.wav`);
-                
+
                 console.log('Uploading audio to server...');
                 aiRecommendations.innerHTML = '<div style="text-align: center; padding: 20px;"><strong>🔄 Processing...</strong><br>Transcribing audio and analyzing with AI...</div>';
-                
-                // Send to server
-                const response = await fetch(`/process_consultation/${patientId}`, {
+
+                // Send to server (V2 route to bypass caching issues)
+                const response = await fetch(`/api/process_consultation_v2/${patientId}`, {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (result.success) {
                     console.log('✓ Processing successful:', result);
-                    
+
                     // Store consultation ID for linking prescription later
                     currentConsultationId = result.consultation_id;
                     console.log('✓ Consultation ID stored:', currentConsultationId);
-                    
+
                     // Update status
                     statusMessage.textContent = '✓ Processing complete! AI recommendations generated';
                     statusMessage.parentElement.style.background = '#d4edda';
                     statusMessage.parentElement.style.borderColor = '#c3e6cb';
                     statusMessage.parentElement.style.color = '#155724';
-                    
+
                     // Display recommendations
                     displayRecommendations(result.recommendations);
-                    
+
+                    // Update weights display if returned
+                    if (result.weights) {
+                        updateWeightsDisplay(result.weights);
+                    }
+
                     // Re-enable recording button
                     startBtn.disabled = false;
-                    
+
                 } else {
                     throw new Error(result.error || 'Unknown error');
                 }
-                
+
             } catch (error) {
                 console.error('Error processing consultation:', error);
-                
+
                 statusMessage.textContent = '❌ Error processing consultation: ' + error.message;
                 statusMessage.parentElement.style.background = '#f8d7da';
                 statusMessage.parentElement.style.borderColor = '#f5c6cb';
                 statusMessage.parentElement.style.color = '#721c24';
-                
+
                 aiRecommendations.innerHTML = `
                     <div style="text-align: center; padding: 20px; color: #721c24;">
                         <strong>❌ Error</strong><br>
@@ -1104,42 +1318,107 @@ ${consultation.transcript_text || 'No transcript available'}
                         <small>Please try recording again or contact support if the problem persists.</small>
                     </div>
                 `;
-                
+
                 // Re-enable recording button
                 startBtn.disabled = false;
             }
         }
-        
-        // Display AI Recommendations
+
+        // Display AI Recommendations with voting and explanations
         function displayRecommendations(recommendations) {
+            console.log("RAW RECOMMENDATIONS DATA:", JSON.stringify(recommendations, null, 2));
+
             if (!recommendations || recommendations.length === 0) {
                 aiRecommendations.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">No recommendations generated. Try describing symptoms in more detail.</div>';
                 return;
             }
-            
+
             let html = '<div style="display: flex; flex-direction: column; gap: 15px;">';
-            
+
             recommendations.forEach((med, index) => {
                 const stockWarning = med.stock_level < 10 ? ' ⚠️ Low Stock' : '';
-                const scoreColor = med.similarity_score >= 40 ? '#28a745' : 
-                                 med.similarity_score >= 25 ? '#ffc107' : '#6c757d';
-                
+                const score = med.final_score ? Math.round(med.final_score * 100) : med.similarity_score;
+                const scoreColor = score >= 40 ? '#28a745' : score >= 25 ? '#ffc107' : '#6c757d';
+                const voting = med.voting || {};
+                const explanation = med.explanation || {};
+
+                // Build voting bars HTML
+                let votingHtml = '<div class="voting-bars">';
+                ['semantic', 'tfidf', 'knowledge', 'collaborative'].forEach(model => {
+                    const modelScore = voting[model] ? Math.round(voting[model] * 100) : 0;
+                    votingHtml += `
+                        <div class="voting-bar">
+                            <span class="voting-bar-label">${model}</span>
+                            <div class="voting-bar-track">
+                                <div class="voting-bar-fill ${model}" style="width: ${modelScore}%"></div>
+                            </div>
+                            <span style="width: 35px; text-align: right;">${modelScore}%</span>
+                        </div>
+                    `;
+                });
+                votingHtml += '</div>';
+
+                // Build explanation HTML
+                let explainHtml = '';
+                if (explanation.primary_reason || explanation.feature_importance) {
+                    let featureHtml = '';
+                    if (explanation.feature_importance && Object.keys(explanation.feature_importance).length > 0) {
+                        featureHtml = '<div style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px;">';
+                        featureHtml += '<div style="font-size: 0.85em; font-weight: bold; color: #555; margin-bottom: 5px;">Token Importance (LIME):</div>';
+
+                        // Sort by absolute importance
+                        const sortedFeatures = Object.entries(explanation.feature_importance)
+                            .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+                            .slice(0, 6);
+
+                        sortedFeatures.forEach(([token, weight]) => {
+                            const absWeight = Math.min(Math.abs(weight) * 5, 1); // Scale for better visibility
+                            const barWidth = Math.round(absWeight * 100);
+                            const barColor = weight > 0 ? '#28a745' : '#dc3545';
+                            featureHtml += `
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px; font-size: 0.8em;">
+                                    <span style="width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${token}</span>
+                                    <div style="flex-grow: 1; height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden;">
+                                        <div style="width: ${barWidth}%; height: 100%; background: ${barColor};"></div>
+                                    </div>
+                                    <span style="width: 30px; text-align: right; color: ${barColor};">${weight > 0 ? '+' : ''}${Math.round(weight * 100)}%</span>
+                                </div>
+                            `;
+                        });
+                        featureHtml += '</div>';
+                    }
+
+                    explainHtml = `
+                        <div class="explanation-card" id="explain-${index}" style="display: none;">
+                            <div class="explanation-reason">
+                                💡 <strong>${explanation.primary_reason || 'AI Reasoning'}:</strong> 
+                                ${explanation.natural_language || 'This medicine matches the detected symptom patterns.'}
+                            </div>
+                            ${featureHtml}
+                            ${explanation.confidence ? `<div style="margin-top: 10px; color: #888; font-size: 0.75em; border-top: 1px solid #eee; padding-top: 5px;">Model Confidence: ${Math.round(explanation.confidence * 100)}%</div>` : ''}
+                        </div>
+                    `;
+                }
+
                 html += `
                     <div style="background: white; border-radius: 8px; padding: 15px; border-left: 4px solid ${scoreColor};">
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                             <div>
                                 <strong style="font-size: 1.1em; color: #333;">${index + 1}. ${med.name}</strong>
                                 ${stockWarning ? '<span style="color: #dc3545; font-size: 0.85em; margin-left: 10px;">' + stockWarning + '</span>' : ''}
+                                <button class="explain-toggle" onclick="toggleExplanation(${index})">Why?</button>
                             </div>
                             <span style="background: ${scoreColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: bold;">
-                                ${med.similarity_score}% match
+                                ${score}% match
                             </span>
                         </div>
                         <div style="color: #666; font-size: 0.9em; margin-bottom: 8px;">
                             ${med.description}
                         </div>
+                        ${votingHtml}
+                        ${explainHtml}
                         <div style="display: flex; gap: 10px; margin-top: 10px;">
-                            <button onclick="addToPrescription('${med.name}')" 
+                            <button onclick="addToPrescriptionWithFeedback('${med.name.replace(/'/g, "\\'")}')" 
                                     style="background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85em;">
                                 ➕ Add to Prescription
                             </button>
@@ -1150,34 +1429,120 @@ ${consultation.transcript_text || 'No transcript available'}
                     </div>
                 `;
             });
-            
+
             html += '</div>';
             aiRecommendations.innerHTML = html;
-            
-            console.log(`✓ Displayed ${recommendations.length} recommendations`);
+
+            console.log(`✓ Displayed ${recommendations.length} hybrid recommendations`);
         }
-        
-        // Add medicine to prescription text area
-        function addToPrescription(medicineName) {
+
+        // Toggle explanation visibility
+        function toggleExplanation(index) {
+            const explainDiv = document.getElementById(`explain-${index}`);
+            if (explainDiv) {
+                explainDiv.style.display = explainDiv.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // Add medicine to prescription with weight feedback
+        function addToPrescriptionWithFeedback(medicineName) {
             const currentText = prescriptionText.value;
             const newMedicine = `${medicineName}\n`;
-            
+
             // Check if medicine is already in prescription
             if (currentText.includes(medicineName)) {
                 alert(`${medicineName} is already in the prescription.`);
                 return;
             }
-            
+
             prescriptionText.value = currentText + newMedicine;
             console.log(`Added ${medicineName} to prescription`);
-            
+
+            // Send feedback to update model weights
+            fetch('/api/ensemble/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ medicine_name: medicineName })
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Weights updated:', data.new_weights);
+                        updateWeightsDisplay(data.new_weights);
+                    }
+                }).catch(err => console.log('Weight feedback error:', err));
+
             // Visual feedback
             prescriptionText.style.borderColor = '#28a745';
             setTimeout(() => {
                 prescriptionText.style.borderColor = '#e0e0e0';
             }, 500);
         }
+
+        // Legacy function for backward compatibility
+        function addToPrescription(medicineName) {
+            addToPrescriptionWithFeedback(medicineName);
+        }
+
+        // Update weights display
+        function updateWeightsDisplay(weights) {
+            if (weights.semantic !== undefined) document.getElementById('w-semantic').textContent = Math.round(weights.semantic * 100) + '%';
+            if (weights.tfidf !== undefined) document.getElementById('w-tfidf').textContent = Math.round(weights.tfidf * 100) + '%';
+            if (weights.knowledge !== undefined) document.getElementById('w-knowledge').textContent = Math.round(weights.knowledge * 100) + '%';
+            if (weights.collaborative !== undefined) document.getElementById('w-collaborative').textContent = Math.round(weights.collaborative * 100) + '%';
+        }
+
+        // Load initial weights (non-blocking, with timeout)
+        setTimeout(async () => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+                const response = await fetch('/api/ensemble/status', { signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                const data = await response.json();
+                if (data.success && data.weights) {
+                    updateWeightsDisplay(data.weights);
+                    console.log('Loaded ensemble weights');
+                }
+            } catch (err) {
+                console.log('Could not load weights (non-critical):', err.message);
+            }
+        }, 100); // Small delay to not block page load
+
+        // FL Simulation
+        document.getElementById('btn-run-fl').addEventListener('click', async function () {
+            const btn = this;
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Running...';
+
+            try {
+                const response = await fetch('/api/fl/simulate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ num_rounds: 3, num_clients: 3 })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('fl-rounds').textContent = data.results.total_rounds;
+                    document.getElementById('fl-clients').textContent = data.results.num_clients;
+                    document.getElementById('fl-loss').textContent = data.results.final_metrics.avg_loss.toFixed(3);
+                    document.getElementById('fl-wer').textContent = data.results.final_metrics.avg_wer.toFixed(3);
+                    console.log('FL simulation complete:', data.results);
+                } else {
+                    alert('FL simulation failed: ' + data.error);
+                }
+            } catch (error) {
+                console.error('FL simulation error:', error);
+                alert('FL simulation error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Run FL Simulation';
+            }
+        });
     </script>
 </body>
-</html>
 
+</html>
