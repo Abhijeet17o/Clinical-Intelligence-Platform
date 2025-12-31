@@ -66,7 +66,7 @@ class RecommendationExplainer:
             return self._template_explanation(medicine, feature_importance, voting)
         
         try:
-            model = genai.GenerativeModel('gemini-2.0-flash')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
             # Prepare top symptoms
             top_symptoms = sorted(

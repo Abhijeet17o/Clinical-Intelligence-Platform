@@ -26,6 +26,12 @@ class MedicineDatabase:
     including stock levels and prescription frequencies.
     """
     
+    def _get_conn(self):
+        """Return a new SQLite connection configured for multi-thread use."""
+        conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+
     def __init__(self, db_path: str = 'pharmacy.db'):
         """
         Initialize the Medicine Database.
@@ -34,18 +40,14 @@ class MedicineDatabase:
             db_path (str): Path to the SQLite database file
         """
         self.db_path = db_path
-        self.connection = None
-        
+
         try:
-            # Establish database connection
-            self.connection = sqlite3.connect(self.db_path)
-            self.connection.row_factory = sqlite3.Row  # Enable column access by name
-            logger.info(f"✓ Connected to database: {self.db_path}")
-            
+            # Test connection access and create tables if needed
+            with self._get_conn() as conn:
+                logger.info(f"✓ Connected to database: {self.db_path}")
             # Create tables if they don't exist
             self._create_tables()
             self._create_patients_table()
-            
         except sqlite3.Error as e:
             logger.error(f"Error connecting to database: {e}")
             raise
@@ -62,21 +64,19 @@ class MedicineDatabase:
             - prescription_frequency: INTEGER (how many times prescribed, default 0)
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS medicines (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT UNIQUE NOT NULL,
-                    description TEXT,
-                    stock_level INTEGER NOT NULL DEFAULT 0,
-                    prescription_frequency INTEGER NOT NULL DEFAULT 0
-                )
-            ''')
-            
-            self.connection.commit()
-            logger.info("✓ Medicines table ready")
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS medicines (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT UNIQUE NOT NULL,
+                        description TEXT,
+                        stock_level INTEGER NOT NULL DEFAULT 0,
+                        prescription_frequency INTEGER NOT NULL DEFAULT 0
+                    )
+                ''')
+                conn.commit()
+                logger.info("✓ Medicines table ready")
         except sqlite3.Error as e:
             logger.error(f"Error creating tables: {e}")
             raise
@@ -95,26 +95,23 @@ class MedicineDatabase:
             - ehr_data: TEXT (JSON string containing electronic health record data)
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS patients (
-                    patient_id TEXT PRIMARY KEY,
-                    full_name TEXT NOT NULL,
-                    date_of_birth TEXT,
-                    contact_info TEXT,
-                    gender TEXT,
-                    insurance_info TEXT,
-                    ehr_data TEXT NOT NULL DEFAULT '{}'
-                )
-            ''')
-            
-            self.connection.commit()
-            logger.info("✓ Patients table ready")
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS patients (
+                        patient_id TEXT PRIMARY KEY,
+                        full_name TEXT NOT NULL,
+                        date_of_birth TEXT,
+                        contact_info TEXT,
+                        gender TEXT,
+                        insurance_info TEXT,
+                        ehr_data TEXT NOT NULL DEFAULT '{}'
+                    )
+                ''')
+                conn.commit()
+                logger.info("✓ Patients table ready")
             # Add new columns if they don't exist (for existing databases)
             self._add_missing_patient_columns()
-            
         except sqlite3.Error as e:
             logger.error(f"Error creating patients table: {e}")
             raise
@@ -122,24 +119,23 @@ class MedicineDatabase:
     def _add_missing_patient_columns(self):
         """Add missing columns to existing patients table"""
         try:
-            cursor = self.connection.cursor()
-            
-            # Check existing columns
-            cursor.execute("PRAGMA table_info(patients)")
-            columns = [column[1] for column in cursor.fetchall()]
-            
-            # Add gender column if missing
-            if 'gender' not in columns:
-                cursor.execute('ALTER TABLE patients ADD COLUMN gender TEXT')
-                logger.info("✓ Added 'gender' column to patients table")
-            
-            # Add insurance_info column if missing
-            if 'insurance_info' not in columns:
-                cursor.execute('ALTER TABLE patients ADD COLUMN insurance_info TEXT')
-                logger.info("✓ Added 'insurance_info' column to patients table")
-            
-            self.connection.commit()
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                # Check existing columns
+                cursor.execute("PRAGMA table_info(patients)")
+                columns = [column[1] for column in cursor.fetchall()]
+
+                # Add gender column if missing
+                if 'gender' not in columns:
+                    cursor.execute('ALTER TABLE patients ADD COLUMN gender TEXT')
+                    logger.info("✓ Added 'gender' column to patients table")
+
+                # Add insurance_info column if missing
+                if 'insurance_info' not in columns:
+                    cursor.execute('ALTER TABLE patients ADD COLUMN insurance_info TEXT')
+                    logger.info("✓ Added 'insurance_info' column to patients table")
+
+                conn.commit()
         except sqlite3.Error as e:
             logger.error(f"Error adding missing columns: {e}")
     
@@ -166,17 +162,15 @@ class MedicineDatabase:
             raise ValueError("Stock level cannot be negative")
         
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('''
-                INSERT INTO medicines (name, description, stock_level, prescription_frequency)
-                VALUES (?, ?, ?, 0)
-            ''', (name.strip(), description.strip(), stock_level))
-            
-            self.connection.commit()
-            logger.info(f"✓ Added medicine: {name} (Stock: {stock_level})")
-            return True
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    INSERT INTO medicines (name, description, stock_level, prescription_frequency)
+                    VALUES (?, ?, ?, 0)
+                ''', (name.strip(), description.strip(), stock_level))
+                conn.commit()
+                logger.info(f"✓ Added medicine: {name} (Stock: {stock_level})")
+                return True
         except sqlite3.IntegrityError:
             logger.warning(f"Medicine '{name}' already exists in database")
             return False
@@ -199,36 +193,34 @@ class MedicineDatabase:
             ValueError: If the update would result in negative stock
         """
         try:
-            cursor = self.connection.cursor()
-            
-            # First, get the current stock level
-            cursor.execute('SELECT stock_level FROM medicines WHERE name = ?', (name,))
-            result = cursor.fetchone()
-            
-            if not result:
-                logger.warning(f"Medicine '{name}' not found in database")
-                return False
-            
-            current_stock = result[0]
-            new_stock = current_stock + quantity_change
-            
-            # Validate that stock won't go negative
-            if new_stock < 0:
-                raise ValueError(f"Insufficient stock for '{name}'. Current: {current_stock}, Requested change: {quantity_change}")
-            
-            # Update the stock
-            cursor.execute('''
-                UPDATE medicines 
-                SET stock_level = ?
-                WHERE name = ?
-            ''', (new_stock, name))
-            
-            self.connection.commit()
-            
-            change_type = "increased" if quantity_change > 0 else "decreased"
-            logger.info(f"✓ Stock {change_type} for {name}: {current_stock} → {new_stock}")
-            return True
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                # First, get the current stock level
+                cursor.execute('SELECT stock_level FROM medicines WHERE name = ?', (name,))
+                result = cursor.fetchone()
+
+                if not result:
+                    logger.warning(f"Medicine '{name}' not found in database")
+                    return False
+
+                current_stock = result[0]
+                new_stock = current_stock + quantity_change
+
+                # Validate that stock won't go negative
+                if new_stock < 0:
+                    raise ValueError(f"Insufficient stock for '{name}'. Current: {current_stock}, Requested change: {quantity_change}")
+
+                # Update the stock
+                cursor.execute('''
+                    UPDATE medicines 
+                    SET stock_level = ?
+                    WHERE name = ?
+                ''', (new_stock, name))
+                conn.commit()
+
+                change_type = "increased" if quantity_change > 0 else "decreased"
+                logger.info(f"✓ Stock {change_type} for {name}: {current_stock} → {new_stock}")
+                return True
         except sqlite3.Error as e:
             logger.error(f"Error updating stock: {e}")
             return False
@@ -247,22 +239,21 @@ class MedicineDatabase:
             bool: True if successful, False otherwise
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('''
-                UPDATE medicines 
-                SET prescription_frequency = prescription_frequency + 1
-                WHERE name = ?
-            ''', (name,))
-            
-            if cursor.rowcount == 0:
-                logger.warning(f"Medicine '{name}' not found in database")
-                return False
-            
-            self.connection.commit()
-            logger.info(f"✓ Incremented prescription frequency for: {name}")
-            return True
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE medicines 
+                    SET prescription_frequency = prescription_frequency + 1
+                    WHERE name = ?
+                ''', (name,))
+
+                if cursor.rowcount == 0:
+                    logger.warning(f"Medicine '{name}' not found in database")
+                    return False
+
+                conn.commit()
+                logger.info(f"✓ Incremented prescription frequency for: {name}")
+                return True
         except sqlite3.Error as e:
             logger.error(f"Error incrementing prescription frequency: {e}")
             return False
@@ -276,25 +267,24 @@ class MedicineDatabase:
                        with keys: id, name, description, stock_level, prescription_frequency
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('SELECT * FROM medicines ORDER BY name')
-            rows = cursor.fetchall()
-            
-            # Convert rows to list of dictionaries
-            medicines = []
-            for row in rows:
-                medicines.append({
-                    'id': row['id'],
-                    'name': row['name'],
-                    'description': row['description'],
-                    'stock_level': row['stock_level'],
-                    'prescription_frequency': row['prescription_frequency']
-                })
-            
-            logger.info(f"✓ Retrieved {len(medicines)} medicines from database")
-            return medicines
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM medicines ORDER BY name')
+                rows = cursor.fetchall()
+
+                # Convert rows to list of dictionaries
+                medicines = []
+                for row in rows:
+                    medicines.append({
+                        'id': row['id'],
+                        'name': row['name'],
+                        'description': row['description'],
+                        'stock_level': row['stock_level'],
+                        'prescription_frequency': row['prescription_frequency']
+                    })
+
+                logger.info(f"✓ Retrieved {len(medicines)} medicines from database")
+                return medicines
         except sqlite3.Error as e:
             logger.error(f"Error retrieving medicines: {e}")
             return []
@@ -310,23 +300,22 @@ class MedicineDatabase:
             Dict or None: Dictionary with medicine details, or None if not found
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('SELECT * FROM medicines WHERE name = ?', (name,))
-            row = cursor.fetchone()
-            
-            if row:
-                return {
-                    'id': row['id'],
-                    'name': row['name'],
-                    'description': row['description'],
-                    'stock_level': row['stock_level'],
-                    'prescription_frequency': row['prescription_frequency']
-                }
-            else:
-                logger.warning(f"Medicine '{name}' not found")
-                return None
-                
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM medicines WHERE name = ?', (name,))
+                row = cursor.fetchone()
+
+                if row:
+                    return {
+                        'id': row['id'],
+                        'name': row['name'],
+                        'description': row['description'],
+                        'stock_level': row['stock_level'],
+                        'prescription_frequency': row['prescription_frequency']
+                    }
+                else:
+                    logger.warning(f"Medicine '{name}' not found")
+                    return None
         except sqlite3.Error as e:
             logger.error(f"Error retrieving medicine: {e}")
             return None
@@ -342,31 +331,30 @@ class MedicineDatabase:
             List[Dict]: List of medicines with low stock
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('''
-                SELECT * FROM medicines 
-                WHERE stock_level < ?
-                ORDER BY stock_level ASC
-            ''', (threshold,))
-            
-            rows = cursor.fetchall()
-            
-            medicines = []
-            for row in rows:
-                medicines.append({
-                    'id': row['id'],
-                    'name': row['name'],
-                    'description': row['description'],
-                    'stock_level': row['stock_level'],
-                    'prescription_frequency': row['prescription_frequency']
-                })
-            
-            if medicines:
-                logger.warning(f"⚠️ {len(medicines)} medicines are low on stock (< {threshold})")
-            
-            return medicines
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT * FROM medicines 
+                    WHERE stock_level < ?
+                    ORDER BY stock_level ASC
+                ''', (threshold,))
+
+                rows = cursor.fetchall()
+
+                medicines = []
+                for row in rows:
+                    medicines.append({
+                        'id': row['id'],
+                        'name': row['name'],
+                        'description': row['description'],
+                        'stock_level': row['stock_level'],
+                        'prescription_frequency': row['prescription_frequency']
+                    })
+
+                if medicines:
+                    logger.warning(f"⚠️ {len(medicines)} medicines are low on stock (< {threshold})")
+
+                return medicines
         except sqlite3.Error as e:
             logger.error(f"Error checking low stock: {e}")
             return []
@@ -401,31 +389,32 @@ class MedicineDatabase:
             raise ValueError("Patient name cannot be empty")
         
         try:
-            cursor = self.connection.cursor()
-            
-            # Initialize comprehensive EHR data structure
-            initial_ehr = {
-                "vital_signs": [],
-                "clinical_notes": [],
-                "medications": [],
-                "diagnoses": [],
-                "procedures": [],
-                "immunizations": [],
-                "lab_results": [],
-                "prescriptions": []
-            }
-            
-            cursor.execute('''
-                INSERT INTO patients (patient_id, full_name, date_of_birth, contact_info, 
-                                     gender, insurance_info, ehr_data)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (patient_id.strip(), full_name.strip(), date_of_birth.strip(), 
-                  contact_info.strip(), gender.strip(), insurance_info.strip(),
-                  json.dumps(initial_ehr)))
-            
-            self.connection.commit()
-            logger.info(f"✓ Added new patient: {full_name} (ID: {patient_id})")
-            return True
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+
+                # Initialize comprehensive EHR data structure
+                initial_ehr = {
+                    "vital_signs": [],
+                    "clinical_notes": [],
+                    "medications": [],
+                    "diagnoses": [],
+                    "procedures": [],
+                    "immunizations": [],
+                    "lab_results": [],
+                    "prescriptions": []
+                }
+
+                cursor.execute('''
+                    INSERT INTO patients (patient_id, full_name, date_of_birth, contact_info, 
+                                         gender, insurance_info, ehr_data)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (patient_id.strip(), full_name.strip(), date_of_birth.strip(), 
+                      contact_info.strip(), gender.strip(), insurance_info.strip(),
+                      json.dumps(initial_ehr)))
+
+                conn.commit()
+                logger.info(f"✓ Added new patient: {full_name} (ID: {patient_id})")
+                return True
             
         except sqlite3.IntegrityError:
             logger.warning(f"Patient with ID '{patient_id}' already exists in database")
@@ -447,24 +436,24 @@ class MedicineDatabase:
                                gender, insurance_info, ehr_data
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('SELECT * FROM patients WHERE patient_id = ?', (patient_id,))
-            row = cursor.fetchone()
-            
-            if row:
-                return {
-                    'patient_id': row['patient_id'],
-                    'full_name': row['full_name'],
-                    'date_of_birth': row['date_of_birth'],
-                    'contact_info': row['contact_info'],
-                    'gender': row['gender'] if 'gender' in row.keys() else '',
-                    'insurance_info': row['insurance_info'] if 'insurance_info' in row.keys() else '',
-                    'ehr_data': row['ehr_data']
-                }
-            else:
-                logger.warning(f"Patient with ID '{patient_id}' not found")
-                return None
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM patients WHERE patient_id = ?', (patient_id,))
+                row = cursor.fetchone()
+
+                if row:
+                    return {
+                        'patient_id': row['patient_id'],
+                        'full_name': row['full_name'],
+                        'date_of_birth': row['date_of_birth'],
+                        'contact_info': row['contact_info'],
+                        'gender': row['gender'] if 'gender' in row.keys() else '',
+                        'insurance_info': row['insurance_info'] if 'insurance_info' in row.keys() else '',
+                        'ehr_data': row['ehr_data']
+                    }
+                else:
+                    logger.warning(f"Patient with ID '{patient_id}' not found")
+                    return None
                 
         except sqlite3.Error as e:
             logger.error(f"Error retrieving patient: {e}")
@@ -482,21 +471,22 @@ class MedicineDatabase:
             bool: True if successful, False otherwise
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('''
-                UPDATE patients 
-                SET ehr_data = ?
-                WHERE patient_id = ?
-            ''', (updated_ehr_json_string, patient_id))
-            
-            if cursor.rowcount == 0:
-                logger.warning(f"Patient with ID '{patient_id}' not found in database")
-                return False
-            
-            self.connection.commit()
-            logger.info(f"✓ Updated EHR data for patient: {patient_id}")
-            return True
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+
+                cursor.execute('''
+                    UPDATE patients 
+                    SET ehr_data = ?
+                    WHERE patient_id = ?
+                ''', (updated_ehr_json_string, patient_id))
+
+                if cursor.rowcount == 0:
+                    logger.warning(f"Patient with ID '{patient_id}' not found in database")
+                    return False
+
+                conn.commit()
+                logger.info(f"✓ Updated EHR data for patient: {patient_id}")
+                return True
             
         except sqlite3.Error as e:
             logger.error(f"Error updating patient EHR: {e}")
@@ -520,48 +510,49 @@ class MedicineDatabase:
             bool: True if successful, False otherwise
         """
         try:
-            cursor = self.connection.cursor()
-            
-            # Build UPDATE query dynamically based on provided parameters
-            updates = []
-            values = []
-            
-            if full_name is not None:
-                updates.append("full_name = ?")
-                values.append(full_name.strip())
-            
-            if date_of_birth is not None:
-                updates.append("date_of_birth = ?")
-                values.append(date_of_birth.strip())
-            
-            if contact_info is not None:
-                updates.append("contact_info = ?")
-                values.append(contact_info.strip())
-            
-            if gender is not None:
-                updates.append("gender = ?")
-                values.append(gender.strip())
-            
-            if insurance_info is not None:
-                updates.append("insurance_info = ?")
-                values.append(insurance_info.strip())
-            
-            if not updates:
-                logger.warning("No fields to update")
-                return False
-            
-            values.append(patient_id)
-            query = f"UPDATE patients SET {', '.join(updates)} WHERE patient_id = ?"
-            
-            cursor.execute(query, values)
-            
-            if cursor.rowcount == 0:
-                logger.warning(f"Patient with ID '{patient_id}' not found in database")
-                return False
-            
-            self.connection.commit()
-            logger.info(f"✓ Updated patient information for: {patient_id}")
-            return True
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+
+                # Build UPDATE query dynamically based on provided parameters
+                updates = []
+                values = []
+
+                if full_name is not None:
+                    updates.append("full_name = ?")
+                    values.append(full_name.strip())
+
+                if date_of_birth is not None:
+                    updates.append("date_of_birth = ?")
+                    values.append(date_of_birth.strip())
+
+                if contact_info is not None:
+                    updates.append("contact_info = ?")
+                    values.append(contact_info.strip())
+
+                if gender is not None:
+                    updates.append("gender = ?")
+                    values.append(gender.strip())
+
+                if insurance_info is not None:
+                    updates.append("insurance_info = ?")
+                    values.append(insurance_info.strip())
+
+                if not updates:
+                    logger.warning("No fields to update")
+                    return False
+
+                values.append(patient_id)
+                query = f"UPDATE patients SET {', '.join(updates)} WHERE patient_id = ?"
+
+                cursor.execute(query, values)
+
+                if cursor.rowcount == 0:
+                    logger.warning(f"Patient with ID '{patient_id}' not found in database")
+                    return False
+
+                conn.commit()
+                logger.info(f"✓ Updated patient information for: {patient_id}")
+                return True
             
         except sqlite3.Error as e:
             logger.error(f"Error updating patient info: {e}")
@@ -577,38 +568,37 @@ class MedicineDatabase:
                                  gender, insurance_info, ehr_data
         """
         try:
-            cursor = self.connection.cursor()
-            
-            cursor.execute('SELECT * FROM patients ORDER BY full_name')
-            rows = cursor.fetchall()
-            
-            # Convert rows to list of dictionaries
-            patients = []
-            for row in rows:
-                patients.append({
-                    'patient_id': row['patient_id'],
-                    'full_name': row['full_name'],
-                    'date_of_birth': row['date_of_birth'],
-                    'contact_info': row['contact_info'],
-                    'gender': row['gender'] if 'gender' in row.keys() else '',
-                    'insurance_info': row['insurance_info'] if 'insurance_info' in row.keys() else '',
-                    'ehr_data': row['ehr_data']
-                })
-            
-            logger.info(f"✓ Retrieved {len(patients)} patients from database")
-            return patients
-            
+            with self._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT * FROM patients ORDER BY full_name')
+                rows = cursor.fetchall()
+
+                # Convert rows to list of dictionaries
+                patients = []
+                for row in rows:
+                    patients.append({
+                        'patient_id': row['patient_id'],
+                        'full_name': row['full_name'],
+                        'date_of_birth': row['date_of_birth'],
+                        'contact_info': row['contact_info'],
+                        'gender': row['gender'] if 'gender' in row.keys() else '',
+                        'insurance_info': row['insurance_info'] if 'insurance_info' in row.keys() else '',
+                        'ehr_data': row['ehr_data']
+                    })
+
+                logger.info(f"✓ Retrieved {len(patients)} patients from database")
+                return patients
         except sqlite3.Error as e:
             logger.error(f"Error retrieving patients: {e}")
             return []
     
     def close_connection(self):
         """
-        Safely close the database connection.
+        Close any persistent connections. With the per-call connection approach
+        there is usually nothing to do, but keep this method for API compatibility.
         """
-        if self.connection:
-            self.connection.close()
-            logger.info("✓ Database connection closed")
+        # No persistent connection to close when using per-call connections
+        logger.info("✓ Database connection (per-call) - no persistent connection to close")
 
 
 # Demo/Testing

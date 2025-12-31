@@ -16,7 +16,7 @@ Full-featured Electronic Health Record web application with AI-powered consultat
 
 ### 2. CONSULTATION & RECORDING
 - ✓ **Browser Audio Recording** - MediaRecorder API (no external software needed)
-- ✓ **Whisper AI Transcription** - Automatic speech-to-text conversion
+- ✓ **Gemini 2.5 Flash Transcription** (if `GEMINI_API_KEY` configured) - Automatic speech-to-text conversion. The implementation now runs in Gemini-only mode when the API key is present; Whisper is retained for local testing.
 - ✓ **Real-Time Status Updates** - Visual feedback during recording/processing
 - ✓ **Multi-Format Support** - WAV, MP3, OGG, WebM, M4A (50MB max)
 - ✓ **Session Management** - Organized storage in `data/sessions/{session_id}/`
@@ -32,7 +32,7 @@ Full-featured Electronic Health Record web application with AI-powered consultat
 - ✓ **Automatic EHR Updates** - Database updates after each consultation
 
 ### 4. PRESCRIPTION MANAGEMENT
-- ✓ **AI Recommendations Display** - Click-to-add suggested medicines
+- ✓ **Recommendations Display** - Click-to-add suggested medicines
 - ✓ **Manual Medicine Search** - Search 55-medicine database by name/description
 - ✓ **Free-Text Editing** - Edit prescription text area directly
 - ✓ **Save Prescriptions** - Store with timestamps in patient EHR (JSON format)
@@ -157,7 +157,7 @@ Open browser to: `http://127.0.0.1:5000`
 4. Click "⏹️ Stop Recording & Process"
 5. Wait 10-30 seconds for AI processing
 
-**D. Review AI Recommendations:**
+**D. Review Recommendations:**
 1. See recommended medicines with similarity scores
 2. Stock levels and descriptions displayed
 3. Click "➕ Add to Prescription" for selected medicines

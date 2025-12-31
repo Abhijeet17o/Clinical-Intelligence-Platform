@@ -643,11 +643,11 @@
                                 based on your selections</small>
                         </div>
 
-                        <!-- AI Recommendations -->
+                        <!-- Recommendations -->
                         <div class="ai-recommendations">
-                            <h3>🤖 Hybrid AI Recommendations</h3>
+                            <h3>🤖 Hybrid Recommendations</h3>
                             <div class="ai-recommendations-content" id="ai-recommendations">
-                                AI recommendations will appear here after consultation recording is processed
+                                Recommendations will appear here after consultation recording is processed
                             </div>
                         </div>
 
@@ -1010,9 +1010,9 @@
                         // Clear prescription text area
                         prescriptionTextArea.value = '';
 
-                        // Clear search results and AI recommendations
+                        // Clear search results and Recommendations
                         searchResults.innerHTML = '';
-                        document.getElementById('ai-recommendations').innerHTML = 'AI recommendations will appear here after consultation recording is processed';
+                        document.getElementById('ai-recommendations').innerHTML = 'Recommendations will appear here after consultation recording is processed';
 
                         // Clear consultation ID after saving
                         currentConsultationId = null;
@@ -1425,28 +1425,65 @@ ${consultation.transcript_text || 'No transcript available'}
                 const result = await response.json();
 
                 if (result.success) {
-                    console.log('✓ Processing successful:', result);
+                    console.log('✓ Processing accepted:', result);
 
                     // Store consultation ID for linking prescription later
                     currentConsultationId = result.consultation_id;
                     console.log('✓ Consultation ID stored:', currentConsultationId);
 
-                    // Update status
-                    statusMessage.textContent = '✓ Processing complete! AI recommendations generated';
-                    statusMessage.parentElement.style.background = '#d4edda';
-                    statusMessage.parentElement.style.borderColor = '#c3e6cb';
-                    statusMessage.parentElement.style.color = '#155724';
+                    // If processing is async, poll for results
+                    if (result.processing) {
+                        statusMessage.textContent = '⏳ Processing in background...';
+                        statusMessage.parentElement.style.background = '#fff3cd';
+                        statusMessage.parentElement.style.borderColor = '#ffeeba';
+                        statusMessage.parentElement.style.color = '#856404';
 
-                    // Display recommendations
-                    displayRecommendations(result.recommendations);
+                        // Poll consultation status
+                        const pollStatus = async () => {
+                            try {
+                                const r = await fetch(`/api/consultation_status/${patientId}`, { method: 'GET' });
+                                const js = await r.json();
+                                if (js.success && js.consultation) {
+                                    if (!js.consultation.processing) {
+                                        // Done
+                                        statusMessage.textContent = '✓ Processing complete! Recommendations generated';
+                                        statusMessage.parentElement.style.background = '#d4edda';
+                                        statusMessage.parentElement.style.borderColor = '#c3e6cb';
+                                        statusMessage.parentElement.style.color = '#155724';
 
-                    // Update weights display if returned
-                    if (result.weights) {
-                        updateWeightsDisplay(result.weights);
+                                        const recs = js.consultation.recommendations || [];
+                                        displayRecommendations(recs);
+
+                                        // Re-enable recording button
+                                        startBtn.disabled = false;
+                                        return;
+                                    }
+                                }
+                            } catch (err) {
+                                console.log('Polling error:', err.message);
+                            }
+                            setTimeout(pollStatus, 1500);
+                        };
+                        pollStatus();
+
+                    } else {
+                        // immediate response with recommendations
+                        statusMessage.textContent = '✓ Processing complete! Recommendations generated';
+                        statusMessage.parentElement.style.background = '#d4edda';
+                        statusMessage.parentElement.style.borderColor = '#c3e6cb';
+                        statusMessage.parentElement.style.color = '#155724';
+
+                        // Display recommendations
+                        displayRecommendations(result.recommendations);
+
+                        // Update weights display if returned
+                        if (result.weights) {
+                            updateWeightsDisplay(result.weights);
+                        }
+
+                        // Re-enable recording button
+                        startBtn.disabled = false;
                     }
-
-                    // Re-enable recording button
-                    startBtn.disabled = false;
 
                 } else {
                     throw new Error(result.error || 'Unknown error');
@@ -1473,7 +1510,7 @@ ${consultation.transcript_text || 'No transcript available'}
             }
         }
 
-        // Display AI Recommendations with voting and explanations
+        // Display Recommendations with voting and explanations
         function displayRecommendations(recommendations) {
             console.log("RAW RECOMMENDATIONS DATA:", JSON.stringify(recommendations, null, 2));
 

@@ -1,6 +1,6 @@
 # EHR Pipeline System
 
-A modular Electronic Health Record system that transcribes doctor-patient conversations using **Whisper AI** and extracts medical information using **Google Gemini AI**.
+A modular Electronic Health Record system that transcribes doctor-patient conversations using **Google Gemini (gemini-2.5-flash)** when available (falls back to Whisper AI locally if not) and extracts medical information using **Google Gemini AI**.
 
 ## 🏗️ Project Structure
 
@@ -37,8 +37,8 @@ pip install -r requirements.txt
 ```
 
 Required packages:
-- `openai-whisper` - AI transcription (Whisper)
-- `google-generativeai` - AI extraction (Gemini)
+- `google-generativeai` - AI transcription (Gemini 2.5 Flash) and extraction (Gemini)
+- `openai-whisper` - (Optional) local transcription fallback when Gemini API key is not available
 - `sounddevice` - Audio recording
 - `soundfile` - Audio file handling
 - `numpy` - Audio processing
@@ -60,7 +60,7 @@ python run_pipeline.py
 This will guide you through:
 1. Entering patient/doctor information
 2. Recording or selecting audio file
-3. Automatic transcription (using Whisper AI)
+3. Automatic transcription (using Gemini 2.5 Flash API when `GEMINI_API_KEY` is set). The repository retains Whisper for local fallback testing, but the default behavior in Gemini-only mode is to use Gemini exclusively.
 4. Automatic EHR profile extraction (using Gemini AI)
 
 ### 4. View Session Results
@@ -84,7 +84,7 @@ Each patient consultation creates a **unique session** with:
    ├─ Record audio from microphone OR
    └─ Import existing audio file
    
-2. 📝 TRANSCRIPTION (Whisper AI)
+2. 📝 TRANSCRIPTION (Gemini 2.5 Flash when available; local Whisper fallback)
    ├─ Load audio file
    ├─ Transcribe using OpenAI Whisper
    └─ Save transcript as JSON
@@ -149,12 +149,12 @@ Speak about symptoms, allergies, lifestyle → Whisper transcribes → Gemini ex
 
 ## 🔧 Configuration
 
-### Whisper Model Selection
+### Whisper Model Selection (Optional local fallback)
 
-Edit `modules/transcription_engine.py` (line ~69):
+If you don't have a Gemini API key, the system will fall back to local Whisper-based transcription. Edit `modules/transcription_engine.py` (line ~69) to change the Whisper model:
 
 ```python
-model = whisper.load_model("base")  # Current
+model = whisper.load_model("base")  # Current local fallback
 
 # Options:
 # "tiny"   - Fastest, least accurate
@@ -169,11 +169,11 @@ model = whisper.load_model("base")  # Current
 Edit `modules/ehr_autofill.py` (line ~139):
 
 ```python
-model = genai.GenerativeModel('gemini-1.5-flash')  # Current (fast & free)
+model = genai.GenerativeModel('gemini-2.5-flash')  # Current (fast & free)
 
 # Options:
-# 'gemini-1.5-flash'  - Fast, efficient (recommended)
-# 'gemini-1.5-pro'    - More capable, slower
+# 'gemini-2.5-flash'  - Fast, efficient (recommended)
+# 'gemini-2.5-pro'    - More capable, slower
 # 'gemini-pro'        - Standard model
 ```
 

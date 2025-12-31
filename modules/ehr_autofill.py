@@ -300,6 +300,35 @@ def save_ehr_to_json(ehr_data, output_path):
         return False
 
 
+def extract_clinical_data(transcript_text):
+    """
+    Convenience wrapper to extract clinical entities from raw transcript text.
+
+    Returns a dict containing clinical fields suitable for inclusion in the
+    patient's EHR (lists for structured fields, strings for simple text fields).
+    """
+    try:
+        fields = [
+            'symptoms', 'diagnoses', 'medications', 'vital_signs', 'clinical_notes',
+            'allergies_mentioned', 'procedures', 'immunizations', 'lab_results',
+            'lifestyle_notes'
+        ]
+        extracted = extract_with_gemini(transcript_text, fields)
+
+        # Ensure expected keys exist with sensible defaults
+        clinical = {}
+        for f in fields:
+            if f in extracted:
+                clinical[f] = extracted[f]
+            else:
+                clinical[f] = [] if f in ['diagnoses', 'medications', 'vital_signs', 'clinical_notes', 'procedures', 'immunizations', 'lab_results'] else ''
+
+        return clinical
+    except Exception as e:
+        logger.error(f"Error extracting clinical data: {e}")
+        return {}
+
+
 # Example usage for testing
 if __name__ == "__main__":
     # Example EHR template

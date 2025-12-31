@@ -4,6 +4,7 @@ Main patient dashboard and management interface
 """
 
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_cors import CORS
 from modules.database_module import MedicineDatabase
 # Lazy import for heavy AI modules to speed up startup
 # from modules import transcription_engine, ehr_autofill, recommendation_module
@@ -91,11 +92,22 @@ def get_auto_aggregator():
     return _auto_aggregator
 
 def get_ensemble_recommender():
-    """Lazy load ensemble recommendation engine with hybrid models"""
+    """Lazy load ensemble recommendation engine with hybrid models
+
+    Preloads local models (e.g., SentenceTransformer) for the semantic recommender
+    to avoid per-request load times.
+    """
     global _ensemble_recommender
     if _ensemble_recommender is None:
         from modules.ensemble_engine import EnsembleRecommender
         _ensemble_recommender = EnsembleRecommender(use_learnable_weights=True)
+        # Preload local models where available
+        try:
+            for rec in _ensemble_recommender.recommenders:
+                if getattr(rec, 'get_name', lambda: '')() == 'semantic':
+                    _ = rec.model  # trigger lazy load
+        except Exception:
+            pass
     return _ensemble_recommender
 
 def get_xai_engine():
@@ -157,6 +169,7 @@ def get_learning_history():
 
 # Initialize Flask application
 app = Flask(__name__)
+CORS(app) # Enable CORS for all routes
 app.secret_key = 'your-secret-key-here-change-in-production'  # Required for flash messages
 
 # Configure file upload settings
@@ -205,6 +218,110 @@ def dashboard():
     
     # Render the dashboard template with patient data
     return render_template('dashboard.html', patients=patients)
+
+
+# ============================================================================
+# JSON API ENDPOINTS FOR NEXT.JS FRONTEND
+# ============================================================================
+
+@app.route('/api/patients', methods=['GET'])
+def api_get_patients():
+    """
+    API: Get All Patients (JSON)
+    
+    Returns a JSON list of all patients for the Next.js frontend.
+    """
+    logger.info("API: Fetching all patients")
+    
+    try:
+        patients = get_db().get_all_patients()
+        
+        # Convert to list of dicts with all relevant fields
+        patients_list = []
+        for p in patients:
+            patients_list.append({
+                'patient_id': p.get('patient_id', ''),
+                'full_name': p.get('full_name', ''),
+                'date_of_birth': p.get('date_of_birth', ''),
+                'gender': p.get('gender', ''),
+                'contact_info': p.get('contact_info', ''),
+                'insurance_info': p.get('insurance_info', ''),
+                'ehr_data': p.get('ehr_data', '{}'),
+            })
+        
+        logger.info(f"API: Retrieved {len(patients_list)} patients")
+        
+        return jsonify({
+            'success': True,
+            'patients': patients_list,
+            'count': len(patients_list)
+        })
+    except Exception as e:
+        logger.error(f"API Error getting patients: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/patient/<patient_id>', methods=['GET'])
+def api_get_patient(patient_id):
+    """
+    API: Get Single Patient (JSON)
+    
+    Returns detailed information for a specific patient.
+    """
+    logger.info(f"API: Fetching patient {patient_id}")
+    
+    try:
+        patient = get_db().get_patient(patient_id)
+        
+        if not patient:
+            return jsonify({'success': False, 'error': 'Patient not found'}), 404
+        
+        patient_data = {
+            'patient_id': patient.get('patient_id', ''),
+            'full_name': patient.get('full_name', ''),
+            'date_of_birth': patient.get('date_of_birth', ''),
+            'gender': patient.get('gender', ''),
+            'contact_info': patient.get('contact_info', ''),
+            'insurance_info': patient.get('insurance_info', ''),
+            'ehr_data': patient.get('ehr_data', '{}'),
+        }
+        
+        return jsonify(patient_data)
+    except Exception as e:
+        logger.error(f"API Error getting patient: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/medicines', methods=['GET'])
+def api_get_medicines():
+    """
+    API: Get All Medicines (JSON)
+    
+    Returns a JSON list of all medicines for the Next.js frontend.
+    """
+    logger.info("API: Fetching all medicines")
+    
+    try:
+        db = get_db()
+        medicines = db.get_all_medicines()
+        
+        medicines_list = []
+        for m in medicines:
+            medicines_list.append({
+                'id': m.get('id', 0),
+                'name': m.get('name', ''),
+                'description': m.get('description', ''),
+                'stock_level': m.get('stock_level', 0),
+            })
+        
+        return jsonify({
+            'success': True,
+            'medicines': medicines_list,
+            'count': len(medicines_list)
+        })
+    except Exception as e:
+        logger.error(f"API Error getting medicines: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/new_patient', methods=['GET', 'POST'])
@@ -293,25 +410,114 @@ def process_consultation_v2(patient_id):
             # Step 2: Transcribe
             logger.info("Transcribing audio...")
             transcription_engine = get_transcription_engine()
+            # Re-encode audio to mono 16kHz to speed up upload and model latency when possible
+            try:
+                reencoded_path = transcription_engine.reencode_audio_to_mono16k(filepath)
+            except Exception:
+                reencoded_path = filepath
+
             # Note: We pass output_dir to ensure we know where it saves
             transcript_path = transcription_engine.transcribe_conversation(
-                filepath, patient_id, "DOC001", output_dir=os.path.join('data', 'sessions', patient_id, 'transcripts')
+                reencoded_path, patient_id, "DOC001", output_dir=os.path.join('data', 'sessions', patient_id, 'transcripts')
             )
             
             if not transcript_path:
                 logger.error("Transcription failed")
                 return jsonify({'success': False, 'error': 'Transcription failed'}), 500
             logger.info(f"Transcription saved to: {transcript_path}")
-            
-            # Step 3: Read transcript and Update EHR
-            # Read transcript
-            with open(transcript_path, 'r', encoding='utf-8') as f:
-                transcript_data = json.load(f)
-            
-            # Use correct key 'transcript'
-            symptoms_text = transcript_data.get('transcript', '')
-            logger.info(f"V2 Transcript length: {len(symptoms_text)}")
-            
+
+            # Immediately return and process EHR & recommendations in background
+            consultation_id = str(uuid.uuid4())
+            from concurrent.futures import ThreadPoolExecutor
+            executor = ThreadPoolExecutor(max_workers=2)
+
+            def process_background(patient_id_local, transcript_path_local, consultation_id_local):
+                logger.info(f"[BG] Processing consultation in background for {patient_id_local}")
+                try:
+                    # Read transcript
+                    with open(transcript_path_local, 'r', encoding='utf-8') as f:
+                        transcript_data_local = json.load(f)
+                    symptoms_text_local = transcript_data_local.get('transcript', '')
+
+                    # EHR autofill
+                    ehr = get_ehr_autofill()
+                    try:
+                        updated = ehr.autofill_ehr(transcript_path_local, {})
+                    except Exception as e:
+                        logger.error(f"[BG] EHR autofill failed: {e}")
+                        updated = {}
+
+                    # Update DB with autofill (if patient exists)
+                    try:
+                        db = get_db()
+                        if updated and isinstance(updated, dict):
+                            current = db.get_patient(patient_id_local) or {}
+                            current_ehr = json.loads(current.get('ehr_data', '{}')) if current.get('ehr_data') else {}
+                            # Merge (simple update)
+                            merged = {**current_ehr, **updated}
+                            db.update_patient_ehr(patient_id_local, json.dumps(merged))
+                    except Exception as e:
+                        logger.error(f"[BG] Updating EHR failed: {e}")
+
+                    # Recommendations
+                    try:
+                        from modules.ensemble_engine import EnsembleRecommender
+                        ensemble = get_ensemble_recommender()
+                        db = get_db()
+                        ensemble.set_database(db)
+                        all_meds = db.get_all_medicines()
+                        recs = ensemble.get_recommendations(symptoms_text_local, all_meds, top_n=5)
+                        xai = get_xai_engine()
+                        explained = xai.explain_batch(symptoms_text_local, recs, recommender_func=None)
+                    except Exception as e:
+                        logger.error(f"[BG] Recommendation generation failed: {e}")
+                        explained = []
+
+                    # Format recommendations for frontend (add similarity_score percentage)
+                    formatted_recs = []
+                    try:
+                        for rec in explained:
+                            formatted_recs.append({
+                                'name': rec.get('name', ''),
+                                'description': rec.get('description', ''),
+                                'similarity_score': round(float(rec.get('final_score', 0)) * 100, 1),
+                                'final_score': rec.get('final_score', 0),
+                                'voting': rec.get('voting', {}),
+                                'explanation': rec.get('explanation', {}),
+                                'stock_level': rec.get('stock_level', 0)
+                            })
+                    except Exception as e:
+                        logger.error(f"[BG] Error formatting recommendations: {e}")
+                        formatted_recs = []
+
+                    # Store in consultation context
+                    from threading import Lock
+                    try:
+                        _consultation_context[patient_id_local] = {
+                            'consultation_id': consultation_id_local,
+                            'symptoms': symptoms_text_local,
+                            'recommendations': formatted_recs,
+                            'timestamp': datetime.now(),
+                            'processing': False
+                        }
+                    except Exception as e:
+                        logger.error(f"[BG] Could not store consultation context: {e}")
+
+                    logger.info(f"[BG] Background processing complete for {patient_id_local}")
+                except Exception as e:
+                    logger.error(f"[BG] Unexpected error in background processing: {e}", exc_info=True)
+
+            # Mark consultation as processing and submit background job
+            _consultation_context[patient_id] = {
+                'consultation_id': consultation_id,
+                'symptoms': '',
+                'recommendations': [],
+                'timestamp': datetime.now(),
+                'processing': True
+            }
+            executor.submit(process_background, patient_id, transcript_path, consultation_id)
+
+            return jsonify({'success': True, 'processing': True, 'consultation_id': consultation_id}), 202            
             if not symptoms_text or len(symptoms_text.strip()) < 2:
                 logger.warning("Empty transcript detected")
                 return jsonify({
@@ -352,7 +558,7 @@ def process_consultation_v2(patient_id):
                 db.update_patient_ehr(patient_id, updated_ehr_str)
             # --- Auto-Fill EHR Logic End ---
             
-            # Step 4: Generate HYBRID AI recommendations
+            # Step 4: Generate HYBRID Recommendations
             all_medicines = db.get_all_medicines()
             
             ensemble = get_ensemble_recommender()
@@ -409,6 +615,39 @@ def process_consultation_v2(patient_id):
             
     except Exception as e:
         logger.error(f"Error in V2 processing: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/consultation_status/<patient_id>', methods=['GET'])
+def consultation_status(patient_id):
+    """Return consultation processing status and recommendations if ready."""
+    try:
+        entry = _consultation_context.get(patient_id)
+        if not entry:
+            return jsonify({'success': False, 'error': 'No consultation found for patient'}), 404
+        # Convert timestamp to isoformat for JSON
+        result = dict(entry)
+        if 'timestamp' in result and hasattr(result['timestamp'], 'isoformat'):
+            result['timestamp'] = result['timestamp'].isoformat()
+        return jsonify({'success': True, 'consultation': result}), 200
+    except Exception as e:
+        logger.error(f"Error fetching consultation status: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# Debug endpoint to list consultations (development only)
+@app.route('/api/_debug/consultations', methods=['GET'])
+def debug_consultations():
+    try:
+        out = {}
+        for pid, entry in _consultation_context.items():
+            ent = dict(entry)
+            if 'timestamp' in ent and hasattr(ent['timestamp'], 'isoformat'):
+                ent['timestamp'] = ent['timestamp'].isoformat()
+            out[pid] = ent
+        return jsonify({'success': True, 'consultations': out}), 200
+    except Exception as e:
+        logger.error(f"Error in debug_consultations: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -797,16 +1036,15 @@ def update_medicine(medicine_id):
             return jsonify({'success': False, 'error': 'Medicine name is required'}), 400
         
         db = get_db()
-        cursor = db.connection.cursor()
-        
-        cursor.execute('''
-            UPDATE medicines 
-            SET name = ?, description = ?, stock_level = ?
-            WHERE id = ?
-        ''', (name, description, stock_level, medicine_id))
-        
-        db.connection.commit()
-        
+        with db._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE medicines 
+                SET name = ?, description = ?, stock_level = ?
+                WHERE id = ?
+            ''', (name, description, stock_level, medicine_id))
+            conn.commit()
+
         logger.info(f"Updated medicine ID {medicine_id}: {name}")
         return jsonify({'success': True, 'message': f'Medicine "{name}" updated successfully'})
         
@@ -822,20 +1060,20 @@ def delete_medicine(medicine_id):
     """Delete medicine from database"""
     try:
         db = get_db()
-        cursor = db.connection.cursor()
-        
-        # Get medicine name first for logging
-        cursor.execute('SELECT name FROM medicines WHERE id = ?', (medicine_id,))
-        result = cursor.fetchone()
-        
-        if not result:
-            return jsonify({'success': False, 'error': 'Medicine not found'}), 404
-        
-        medicine_name = result[0]
-        
-        cursor.execute('DELETE FROM medicines WHERE id = ?', (medicine_id,))
-        db.connection.commit()
-        
+        with db._get_conn() as conn:
+            cursor = conn.cursor()
+            # Get medicine name first for logging
+            cursor.execute('SELECT name FROM medicines WHERE id = ?', (medicine_id,))
+            result = cursor.fetchone()
+
+            if not result:
+                return jsonify({'success': False, 'error': 'Medicine not found'}), 404
+
+            medicine_name = result[0]
+
+            cursor.execute('DELETE FROM medicines WHERE id = ?', (medicine_id,))
+            conn.commit()
+
         logger.info(f"Deleted medicine ID {medicine_id}: {medicine_name}")
         return jsonify({'success': True, 'message': f'Medicine "{medicine_name}" deleted successfully'})
         
@@ -1431,11 +1669,24 @@ def hybrid_recommend(patient_id):
         xai = get_xai_engine()
         explained_recs = xai.explain_batch(symptoms, recommendations)
         
-        logger.info(f"Generated {len(explained_recs)} hybrid recommendations")
+        # Format recommendations with similarity_score percentage for frontend
+        formatted_recs = []
+        for rec in explained_recs:
+            formatted_recs.append({
+                'name': rec.get('name', ''),
+                'description': rec.get('description', ''),
+                'similarity_score': round(float(rec.get('final_score', 0)) * 100, 1),
+                'final_score': rec.get('final_score', 0),
+                'voting': rec.get('voting', {}),
+                'explanation': rec.get('explanation', {}),
+                'stock_level': rec.get('stock_level', 0)
+            })
+
+        logger.info(f"Generated {len(formatted_recs)} hybrid recommendations")
         
         return jsonify({
             'success': True,
-            'recommendations': explained_recs,
+            'recommendations': formatted_recs,
             'weights': ensemble.get_model_weights(),
             'vote_matrix': ensemble.get_vote_matrix_display()
         })
@@ -1444,9 +1695,30 @@ def hybrid_recommend(patient_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+def preload_models_async():
+    """Warm up heavy ML models asynchronously to avoid blocking server startup."""
+    def _worker():
+        try:
+            from modules.recommenders.semantic_recommender import SemanticRecommender
+            logger.info('Asynchronously preloading SemanticRecommender model (SentenceTransformer)')
+            r = SemanticRecommender()
+            _ = r.model
+            logger.info('✓ Asynchronous preload complete (SentenceTransformer)')
+        except Exception as e:
+            logger.warning(f'Async preload failed: {e}')
+
+    # Run loader in background thread
+    import threading
+    t = threading.Thread(target=_worker, daemon=True)
+    t.start()
+
+
 if __name__ == '__main__':
     import sys
     
+    # Warm up heavy models asynchronously before serving requests
+    preload_models_async()
+
     # Check if --no-reload flag is passed
     use_reloader = '--no-reload' not in sys.argv
     

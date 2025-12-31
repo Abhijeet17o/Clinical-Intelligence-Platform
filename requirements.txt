@@ -9,10 +9,10 @@ sounddevice>=0.5.0
 soundfile>=0.13.0
 numpy>=2.0.0
 
-# Speech Recognition (Whisper)
-openai-whisper>=20231117
+# Speech Recognition (Whisper) - OPTIONAL: only needed if you want a local fallback when Gemini API is unavailable
+# openai-whisper>=20231117
 
-# AI/ML for EHR Extraction (Gemini)
+# AI/ML for EHR Extraction & Transcription (Gemini)
 google-generativeai>=0.3.0
 
 # Hybrid Recommendation Engine

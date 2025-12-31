@@ -1,0 +1,64 @@
+{
+    "generated_at": "2025-12-30T14:53:31.037904",
+    "clinical_stats": {
+        "total_patients": 6,
+        "total_prescriptions": 5,
+        "avg_medicines_per_prescription": 1.8,
+        "polypharmacy_rate_percent": 0.0,
+        "gender_distribution": {
+            "Male": 0,
+            "Female": 0,
+            "Other": 6
+        },
+        "age_distribution": {
+            "0-18": 0,
+            "19-40": 5,
+            "41-60": 1,
+            "60+": 0
+        }
+    },
+    "federated_learning_stats": {
+        "total_learning_events": 4,
+        "privacy_preservation_ratio": "1024:1",
+        "model_drift_magnitude": 0.0382,
+        "current_weights": {
+            "semantic": 0.22048434442270062,
+            "tfidf": 0.2241829745596869,
+            "knowledge": 0.25645303326810176,
+            "collaborative": 0.29887964774951076
+        }
+    },
+    "efficiency_stats": {
+        "sample_size": 4,
+        "avg_symptom_word_count": 14.0,
+        "measured_inference_latency_sec": 27.7433,
+        "manual_process_time_sec": 141.0,
+        "ai_assisted_process_time_sec": 64.2,
+        "time_savings_per_consultation_sec": 76.8,
+        "efficiency_improvement_factor": 2.2
+    },
+    "ai_performance_benchmark": {
+        "tfidf": {
+            "top1": 0.25,
+            "top5": 0.25,
+            "mrr": 0.305
+        },
+        "knowledge": {
+            "top1": 0.0,
+            "top5": 0.25,
+            "mrr": 0.18
+        },
+        "hybrid": {
+            "top1": 0.5,
+            "top5": 1.0,
+            "mrr": 0.675
+        },
+        "avg_confidence_boost": -0.0059,
+        "max_confidence_boost": 0.3161
+    },
+    "system_health": {
+        "total_medicine_types": 55,
+        "low_stock_count": 1,
+        "inventory_health_percent": 98.2
+    }
+}

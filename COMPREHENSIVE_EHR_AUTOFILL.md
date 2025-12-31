@@ -95,7 +95,7 @@ Automatically extracted and stored in `ehr_data` JSON field:
                    │
                    ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 2. Transcribe Audio → JSON Transcript (Whisper AI)         │
+│ 2. Transcribe Audio → JSON Transcript (Gemini 2.5 Flash if configured; otherwise Whisper) │
 └──────────────────┬──────────────────────────────────────────┘
                    │
                    ▼

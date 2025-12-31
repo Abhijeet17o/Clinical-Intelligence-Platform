@@ -9,9 +9,9 @@ import json
 import os
 import logging
 from typing import List, Dict, Tuple
-from sentence_transformers import SentenceTransformer
-from scipy.spatial.distance import cosine
 import google.generativeai as genai
+from modules.utils.perf import Timer, get_records
+from scipy.spatial.distance import cosine  # retained for possible numerical fallbacks
 
 # Configure logging
 logging.basicConfig(
@@ -21,10 +21,55 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def prefilter_medicines(symptoms: str, medicines: List[Dict], k: int = 15) -> List[Dict]:
+    """Quick pre-filter medicines by TF-IDF similarity to symptoms.
+
+    Tries a TF-IDF vectorizer to compute cosine similarity and returns the
+    top-k most relevant medicines. Falls back to a token-match heuristic if
+    scikit-learn isn't available or the TF-IDF step fails.
+    """
+    if not symptoms or not medicines:
+        return medicines
+
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        vec = TfidfVectorizer(max_features=2000)
+        corpus = [symptoms] + [m.get('description', '') or m['name'] for m in medicines]
+        X = vec.fit_transform(corpus).toarray()
+        sym_v = X[0]
+        meds_v = X[1:]
+
+        scores = []
+        for v in meds_v:
+            try:
+                sim = 1.0 - cosine(sym_v, v)
+                if sim != sim:
+                    sim = 0.0
+            except Exception:
+                sim = 0.0
+            scores.append(sim)
+
+        idxs = sorted(range(len(medicines)), key=lambda i: scores[i], reverse=True)
+        topk = idxs[:min(k, len(idxs))]
+        return [medicines[i] for i in topk]
+    except Exception:
+        # Fallback: token overlap heuristic
+        tokens = set([t for t in symptoms.lower().split() if len(t) > 3])
+        scored = []
+        for i, m in enumerate(medicines):
+            text = (m.get('description', '') + ' ' + m.get('name', '')).lower()
+            count = sum(1 for t in tokens if t in text)
+            scored.append((count, i))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        topk = [i for _, i in scored[:min(k, len(scored))]]
+        return [medicines[i] for i in topk]
+
+
 def get_medicine_recommendations(
     json_transcript_path: str,
     available_medicines: List[Dict],
-    top_n: int = 5
+    top_n: int = 5,
+    prefilter_k: int = 15
 ) -> List[Tuple[str, float]]:
     """
     Recommend medicines based on semantic similarity between patient symptoms
@@ -53,8 +98,9 @@ def get_medicine_recommendations(
         if not os.path.exists(json_transcript_path):
             raise FileNotFoundError(f"Transcript file not found: {json_transcript_path}")
         
-        with open(json_transcript_path, 'r', encoding='utf-8') as f:
-            transcript_data = json.load(f)
+        with Timer('read_transcript'):
+            with open(json_transcript_path, 'r', encoding='utf-8') as f:
+                transcript_data = json.load(f)
         
         transcript_text = transcript_data.get('transcript', '')
         
@@ -64,7 +110,8 @@ def get_medicine_recommendations(
         
         # Step 2: Extract symptom summary using LLM
         logger.info("Extracting symptom summary from transcript...")
-        symptom_summary = extract_symptom_summary(transcript_text)
+        with Timer('extract_symptoms'):
+            symptom_summary = extract_symptom_summary(transcript_text)
         
         if not symptom_summary:
             logger.warning("No symptoms extracted from transcript")
@@ -72,46 +119,140 @@ def get_medicine_recommendations(
         
         logger.info(f"Symptom summary: {symptom_summary}")
         
-        # Step 3: Load sentence transformer model
-        logger.info("Loading sentence transformer model...")
-        model = SentenceTransformer('all-MiniLM-L6-v2')
-        logger.info("✓ Model loaded successfully")
-        
-        # Step 4: Generate embedding for symptom summary
-        logger.info("Generating embeddings...")
-        symptom_embedding = model.encode(symptom_summary, convert_to_tensor=False)
-        
-        # Step 5: Generate embeddings for all available medicines
-        medicine_texts = []
-        medicine_names = []
-        
-        for med in available_medicines:
-            # Combine name and description for better matching
-            med_text = f"{med['name']}: {med['description']}"
-            medicine_texts.append(med_text)
-            medicine_names.append(med['name'])
-        
+        # Step 3: Pre-filter medicines to a smaller candidate set to reduce latency
+        try:
+            filtered_medicines = prefilter_medicines(symptom_summary, available_medicines, k=prefilter_k)
+            logger.info(f'Prefiltered medicines: {len(available_medicines)} -> {len(filtered_medicines)}')
+        except Exception as e:
+            logger.warning(f'Prefilter step failed, continuing with full set: {e}')
+            filtered_medicines = available_medicines
+
+        # Use the filtered list for Gemini scoring
+        medicines_for_gemini = filtered_medicines
+
+        api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+        # If not set in env, attempt to load from .env file in repo root
+        if not api_key:
+            envpath = os.path.join(os.path.dirname(__file__), '..', '.env')
+            envpath = os.path.abspath(envpath)
+            if os.path.exists(envpath):
+                with open(envpath, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line=line.strip()
+                        if not line or line.startswith('#'):
+                            continue
+                        if '=' in line:
+                            k,v=line.split('=',1)
+                            os.environ.setdefault(k.strip(), v.strip())
+                api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+
+        if not api_key:
+            logger.error('GEMINI_API_KEY is required for Gemini-only recommendations')
+            raise RuntimeError('GEMINI_API_KEY not set')
+
+        try:
+            if hasattr(genai, 'configure'):
+                genai.configure(api_key=api_key)
+        except Exception as e:
+            logger.debug(f"genai.configure not available or failed: {e}")
+
+        try:
+            model = genai.GenerativeModel('gemini-2.5-flash')
+        except Exception as e:
+            logger.error(f'Gemini model unavailable: {e}')
+            raise RuntimeError('Gemini model unavailable')
+
+        # Build medicines list text (for the filtered candidate set)
+        medicine_texts = [f"{med['name']}: {med.get('description','')}" for med in medicines_for_gemini]
+        medicine_names = [med['name'] for med in medicines_for_gemini]
+
         if not medicine_texts:
-            logger.warning("No medicines available in database")
+            logger.warning('No medicines available in database')
             return []
-        
-        medicine_embeddings = model.encode(medicine_texts, convert_to_tensor=False)
-        
-        # Step 6: Calculate cosine similarity
-        logger.info("Calculating similarity scores...")
-        similarities = []
-        
-        for i, med_embedding in enumerate(medicine_embeddings):
-            # Cosine similarity = 1 - cosine distance
-            similarity = 1 - cosine(symptom_embedding, med_embedding)
-            similarities.append((medicine_names[i], similarity))
-        
-        # Step 7: Sort by similarity (highest first) and return top N
-        similarities.sort(key=lambda x: x[1], reverse=True)
-        top_recommendations = similarities[:top_n]
-        
-        logger.info(f"✓ Generated {len(top_recommendations)} recommendations")
-        
+
+        # Construct a prompt asking for JSON scores between 0.0 and 1.0
+        meds_block = "\n".join([f"- {text}" for text in medicine_texts])
+        prompt = (
+            "You are a medical relevance assistant. Given a concise symptom summary and a list of medicines with descriptions, "
+            "rate how relevant each medicine is for treating the symptoms on a scale from 0.0 to 1.0. "
+            "Respond with valid JSON array of objects with keys 'name' and 'score' (number between 0.0 and 1.0), nothing else. "
+            "If unsure, use 0.0. Keep numbers to two decimal places."
+        )
+
+        full_prompt = f"SYMPTOMS:\n{symptom_summary}\n\nMEDICINES:\n{meds_block}\n\n{prompt}"
+
+        gen_cfg = None
+        try:
+            gen_cfg = genai.GenerationConfig(temperature=0.0, max_output_tokens=2048)
+        except Exception:
+            gen_cfg = None
+
+        # Call Gemini
+        try:
+            with Timer('gemini_recommend_generate'):
+                if gen_cfg is not None:
+                    response = model.generate_content(contents=[full_prompt], generation_config=gen_cfg)
+                else:
+                    response = model.generate_content(contents=[full_prompt])
+        except Exception as e:
+            logger.error(f'Gemini recommendation call failed: {e}', exc_info=True)
+            raise RuntimeError('Gemini recommendation call failed')
+
+        # Extract text
+        resp_text = getattr(response, 'text', None) or getattr(response, 'output', None) or ''
+        if not resp_text and hasattr(response, 'candidates'):
+            try:
+                resp_text = response.candidates[0].content
+            except Exception:
+                resp_text = ''
+
+        resp_text = (resp_text or '').strip()
+        logger.info(f'Gemini recommendation response: {resp_text[:500]}')
+
+        # Parse JSON from response (strip code fences or markdown if present)
+        try:
+            import re
+            with Timer('parse_recommendation'):
+                # Attempt to extract the first JSON array in the text
+                start = resp_text.find('[')
+                end = resp_text.rfind(']')
+                cleaned = resp_text if start == -1 or end == -1 else resp_text[start:end+1]
+                # If still empty, remove markdown fences
+                if not cleaned.strip():
+                    cleaned = re.sub(r'```.*?```', '', resp_text, flags=re.S).strip()
+                parsed = json.loads(cleaned)
+                if not isinstance(parsed, list):
+                    raise ValueError('Parsed response is not a list')
+                similarities = []
+                for item in parsed:
+                    name = item.get('name')
+                    score = float(item.get('score', 0.0))
+                    similarities.append((name, score))
+        except Exception as e:
+            logger.error(f'Failed to parse Gemini response as JSON: {e} -- raw response: {resp_text[:500]}')
+            # Fail fast in Gemini-only mode
+            raise RuntimeError('Could not parse Gemini recommendations')
+
+        # Log perf records for visibility
+        try:
+            from modules.utils.perf import get_records
+            perf_list = get_records(reset=True)
+            logger.info("Performance timings: " + ", ".join(f"{k}={v:.3f}s" for k, v in perf_list))
+        except Exception:
+            pass
+
+        # Map parsed results back to the original medicine set (fill 0.0 for non-candidates)
+        parsed_map = {name: score for name, score in similarities}
+
+        all_similarities = []
+        for med in available_medicines:
+            score = float(parsed_map.get(med['name'], 0.0))
+            all_similarities.append((med['name'], score))
+
+        # Sort and return top N
+        all_similarities.sort(key=lambda x: x[1], reverse=True)
+        top_recommendations = all_similarities[:top_n]
+        logger.info(f'✓ Generated {len(top_recommendations)} recommendations via Gemini (prefilter_k={prefilter_k})')
         return top_recommendations
         
     except FileNotFoundError as e:

@@ -127,8 +127,188 @@
         "collaborative": 0.0
       },
       "learning_count": 2
+    },
+    {
+      "id": 5,
+      "timestamp": "2025-12-31T00:58:55.579342",
+      "symptoms": " There is a leg pain in my left leg.",
+      "recommended_medicines": [
+        "Paracetamol",
+        "Paracetamol 500mg",
+        "Metformin",
+        "Tramadol 50mg",
+        "Ibuprofen"
+      ],
+      "selected_medicine": "Paracetamol",
+      "weights_before": {
+        "semantic": 0.22343590998043056,
+        "tfidf": 0.2267646771037182,
+        "knowledge": 0.2558077299412916,
+        "collaborative": 0.2939916829745597
+      },
+      "weights_after": {
+        "semantic": 0.22343590998043056,
+        "tfidf": 0.2267646771037182,
+        "knowledge": 0.2558077299412916,
+        "collaborative": 0.2939916829745597
+      },
+      "weight_changes": {
+        "semantic": 0.0,
+        "tfidf": 0.0,
+        "knowledge": 0.0,
+        "collaborative": 0.0
+      },
+      "learning_count": 1
+    },
+    {
+      "id": 6,
+      "timestamp": "2025-12-31T00:58:55.595268",
+      "symptoms": " There is a leg pain in my left leg.",
+      "recommended_medicines": [
+        "Paracetamol",
+        "Paracetamol 500mg",
+        "Metformin",
+        "Tramadol 50mg",
+        "Ibuprofen"
+      ],
+      "selected_medicine": "Ibuprofen",
+      "weights_before": {
+        "semantic": 0.22343590998043056,
+        "tfidf": 0.2267646771037182,
+        "knowledge": 0.2558077299412916,
+        "collaborative": 0.2939916829745597
+      },
+      "weights_after": {
+        "semantic": 0.2260923189823875,
+        "tfidf": 0.22908820939334637,
+        "knowledge": 0.25522695694716246,
+        "collaborative": 0.28959251467710373
+      },
+      "weight_changes": {
+        "semantic": 0.002656409001956933,
+        "tfidf": 0.002323532289628172,
+        "knowledge": -0.0005807729941291195,
+        "collaborative": -0.004399168297455958
+      },
+      "learning_count": 2
+    },
+    {
+      "id": 7,
+      "timestamp": "2025-12-31T20:13:55.218792",
+      "symptoms": " I have a stomach ache.",
+      "recommended_medicines": [
+        "Paracetamol",
+        "Omeprazole 20mg",
+        "Metformin",
+        "Pantoprazole 40mg",
+        "Paracetamol 500mg"
+      ],
+      "selected_medicine": "Pantoprazole 40mg",
+      "weights_before": {
+        "semantic": 0.2260923189823875,
+        "tfidf": 0.22908820939334637,
+        "knowledge": 0.25522695694716246,
+        "collaborative": 0.28959251467710373
+      },
+      "weights_after": {
+        "semantic": 0.2260923189823875,
+        "tfidf": 0.22908820939334637,
+        "knowledge": 0.25522695694716246,
+        "collaborative": 0.28959251467710373
+      },
+      "weight_changes": {
+        "semantic": 0.0,
+        "tfidf": 0.0,
+        "knowledge": 0.0,
+        "collaborative": 0.0
+      },
+      "learning_count": 1
+    },
+    {
+      "id": 8,
+      "timestamp": "2025-12-31T20:13:55.241744",
+      "symptoms": " I have a stomach ache.",
+      "recommended_medicines": [
+        "Paracetamol",
+        "Omeprazole 20mg",
+        "Metformin",
+        "Pantoprazole 40mg",
+        "Paracetamol 500mg"
+      ],
+      "selected_medicine": "Metformin",
+      "weights_before": {
+        "semantic": 0.2260923189823875,
+        "tfidf": 0.22908820939334637,
+        "knowledge": 0.25522695694716246,
+        "collaborative": 0.28959251467710373
+      },
+      "weights_after": {
+        "semantic": 0.2260923189823875,
+        "tfidf": 0.22908820939334637,
+        "knowledge": 0.25522695694716246,
+        "collaborative": 0.28959251467710373
+      },
+      "weight_changes": {
+        "semantic": 0.0,
+        "tfidf": 0.0,
+        "knowledge": 0.0,
+        "collaborative": 0.0
+      },
+      "learning_count": 2
+    },
+    {
+      "id": 9,
+      "timestamp": "2026-01-01T02:37:44.710032",
+      "symptoms": "",
+      "recommended_medicines": [],
+      "selected_medicine": "Ibuprofen",
+      "weights_before": {
+        "semantic": 0.2260923189823875,
+        "tfidf": 0.22908820939334637,
+        "knowledge": 0.25522695694716246,
+        "collaborative": 0.28959251467710373
+      },
+      "weights_after": {
+        "semantic": 0.20810736454079615,
+        "tfidf": 0.23797129596846262,
+        "knowledge": 0.2614961687668971,
+        "collaborative": 0.2924251707238442
+      },
+      "weight_changes": {
+        "semantic": -0.017984954441591344,
+        "tfidf": 0.008883086575116245,
+        "knowledge": 0.00626921181973461,
+        "collaborative": 0.0028326560467404893
+      },
+      "learning_count": 1
+    },
+    {
+      "id": 10,
+      "timestamp": "2026-01-01T02:37:44.723745",
+      "symptoms": "",
+      "recommended_medicines": [],
+      "selected_medicine": "Pantoprazole 40mg",
+      "weights_before": {
+        "semantic": 0.20810736454079615,
+        "tfidf": 0.23797129596846262,
+        "knowledge": 0.2614961687668971,
+        "collaborative": 0.2924251707238442
+      },
+      "weights_after": {
+        "semantic": 0.20719954070807578,
+        "tfidf": 0.24087319549782993,
+        "knowledge": 0.26204558101642095,
+        "collaborative": 0.2898816827776734
+      },
+      "weight_changes": {
+        "semantic": -0.0009078238327203669,
+        "tfidf": 0.0029018995293673133,
+        "knowledge": 0.0005494122495238729,
+        "collaborative": -0.0025434879461708193
+      },
+      "learning_count": 2
     }
   ],
-  "last_updated": "2025-12-27T04:22:13.495949",
-  "total_events": 4
+  "last_updated": "2026-01-01T02:37:44.723843",
+  "total_events": 10
 }

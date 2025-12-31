@@ -1,0 +1,11 @@
+{
+  "patient_id": "PTEST",
+  "doctor_id": "DTEST",
+  "conversation_timestamp": "2025-12-31T23:19:39.851162",
+  "transcript": "Hi man, how are you? This is morning right now. It's 4:00 a.m.",
+  "_perf": {
+    "upload_audio": 5.286,
+    "gemini_generate": 4.546,
+    "parse_transcript": 0.0
+  }
+}

@@ -1,7 +1,7 @@
 {
-  "total_learnings": 4,
-  "today_count": 4,
-  "last_learning": "2025-12-27T04:22:13.495886",
+  "total_learnings": 10,
+  "today_count": 2,
+  "last_learning": "2026-01-01T02:37:44.723745",
   "weight_evolution": {
     "2025-12-27T04:09:07.443775": {
       "semantic": 0.2291095890410959,
@@ -26,6 +26,42 @@
       "tfidf": 0.2241829745596869,
       "knowledge": 0.25645303326810176,
       "collaborative": 0.29887964774951076
+    },
+    "2025-12-31T00:58:55.579342": {
+      "semantic": 0.22343590998043056,
+      "tfidf": 0.2267646771037182,
+      "knowledge": 0.2558077299412916,
+      "collaborative": 0.2939916829745597
+    },
+    "2025-12-31T00:58:55.595268": {
+      "semantic": 0.2260923189823875,
+      "tfidf": 0.22908820939334637,
+      "knowledge": 0.25522695694716246,
+      "collaborative": 0.28959251467710373
+    },
+    "2025-12-31T20:13:55.218792": {
+      "semantic": 0.2260923189823875,
+      "tfidf": 0.22908820939334637,
+      "knowledge": 0.25522695694716246,
+      "collaborative": 0.28959251467710373
+    },
+    "2025-12-31T20:13:55.241744": {
+      "semantic": 0.2260923189823875,
+      "tfidf": 0.22908820939334637,
+      "knowledge": 0.25522695694716246,
+      "collaborative": 0.28959251467710373
+    },
+    "2026-01-01T02:37:44.710032": {
+      "semantic": 0.20810736454079615,
+      "tfidf": 0.23797129596846262,
+      "knowledge": 0.2614961687668971,
+      "collaborative": 0.2924251707238442
+    },
+    "2026-01-01T02:37:44.723745": {
+      "semantic": 0.20719954070807578,
+      "tfidf": 0.24087319549782993,
+      "knowledge": 0.26204558101642095,
+      "collaborative": 0.2898816827776734
     }
   },
   "medicine_patterns": {
@@ -42,6 +78,30 @@
       "medicines": [
         "Paracetamol",
         "Metformin"
+      ],
+      "count": 2
+    },
+    " there is a leg pain in my left leg.": {
+      "symptoms": " There is a leg pain in my left leg.",
+      "medicines": [
+        "Paracetamol",
+        "Ibuprofen"
+      ],
+      "count": 2
+    },
+    " i have a stomach ache.": {
+      "symptoms": " I have a stomach ache.",
+      "medicines": [
+        "Pantoprazole 40mg",
+        "Metformin"
+      ],
+      "count": 2
+    },
+    "": {
+      "symptoms": "",
+      "medicines": [
+        "Ibuprofen",
+        "Pantoprazole 40mg"
       ],
       "count": 2
     }

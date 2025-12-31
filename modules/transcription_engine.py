@@ -4,11 +4,27 @@ This module transcribes doctor-patient conversations using OpenAI's Whisper mode
 and saves the transcript to a structured JSON file.
 """
 
-import whisper
 import json
-from datetime import datetime
 import os
 import logging
+from datetime import datetime
+
+# Try to import Gemini client (google.generativeai); if not available we'll fall back to local Whisper
+try:
+    import google.generativeai as genai
+    _HAS_GEMINI = True
+except Exception:
+    _HAS_GEMINI = False
+
+from modules.utils.perf import Timer, get_records
+
+_USE_GEMINI = bool(os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')) and _HAS_GEMINI
+
+# Attempt to import local Whisper for fallback (optional) regardless of Gemini availability
+try:
+    import whisper
+except Exception:
+    whisper = None
 
 # Configure logging
 logging.basicConfig(
@@ -16,6 +32,30 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+import shutil
+import subprocess
+
+def reencode_audio_to_mono16k(source_path: str) -> str:
+    """Re-encode audio to mono 16kHz WAV using ffmpeg if available.
+
+    Returns the path to the re-encoded file (may be the original if ffmpeg not available or if re-encode fails).
+    """
+    try:
+        ffmpeg_exe = shutil.which('ffmpeg')
+        if not ffmpeg_exe:
+            logger.debug('ffmpeg not found in PATH, skipping re-encode')
+            return source_path
+
+        base, ext = os.path.splitext(source_path)
+        out_path = f"{base}_16k_mono.wav"
+        cmd = [ffmpeg_exe, '-y', '-i', source_path, '-ac', '1', '-ar', '16000', '-vn', '-acodec', 'pcm_s16le', out_path]
+        logger.info(f'Re-encoding audio to mono 16kHz WAV: {out_path}')
+        subprocess.run(cmd, check=True)
+        return out_path
+    except Exception as e:
+        logger.warning(f'Audio re-encode failed, using original file: {e}')
+        return source_path
 
 
 def transcribe_conversation(audio_file_path, patient_id, doctor_id, output_dir=None):
@@ -63,14 +103,134 @@ def transcribe_conversation(audio_file_path, patient_id, doctor_id, output_dir=N
             raise FileNotFoundError(error_msg)
         
         logger.info(f"Starting transcription for patient: {patient_id}")
-        logger.info(f"Loading Whisper model...")
-        
-        # Load Whisper model (using 'base' model for balance of speed and accuracy)
-        model = whisper.load_model("base")
-        
-        logger.info(f"Transcribing audio file: {audio_file_path}")
-        # Transcribe the audio file
-        result = model.transcribe(audio_file_path)
+
+        # Gemini-only mode: require GEMINI API key and use Gemini for transcription only.
+        if _USE_GEMINI:
+            api_key = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY')
+
+            # Configure genai and create GenerativeModel
+            try:
+                genai.configure(api_key=api_key)
+            except Exception as e:
+                logger.debug(f"genai.configure not available or failed: {e}")
+
+            logger.info("Using Gemini API for transcription (gemini-2.5-flash) [Gemini-only mode]")
+
+            # Build prompt for transcription
+            prompt = (
+                "Transcribe this audio accurately. "
+                "If multiple speakers are present, indicate speaker turns as Speaker 1/2 if possible. "
+                "Return only the transcript text."
+            )
+
+            # Re-encode audio to mono 16kHz WAV if possible to reduce upload time
+            try:
+                audio_to_upload = reencode_audio_to_mono16k(audio_file_path)
+            except Exception:
+                audio_to_upload = audio_file_path
+
+            # Upload audio (best-effort)
+            uploaded = None
+            try:
+                with Timer('upload_audio'):
+                    try:
+                        uploaded = genai.upload_file(audio_to_upload)
+                    except Exception:
+                        uploaded = genai.upload_file(path=audio_to_upload)
+                logger.info("Uploaded audio to Gemini Files API")
+            except Exception as e:
+                logger.error(f"Could not upload audio via genai.upload_file: {e}")
+                # Fail fast in Gemini-only mode
+                raise RuntimeError("Gemini file upload failed")
+
+            # Instantiate model
+            try:
+                model = genai.GenerativeModel('gemini-2.5-flash')
+            except Exception as e:
+                logger.error(f"GenerativeModel API unavailable: {e}")
+                raise RuntimeError("Gemini GenerativeModel API is not available")
+
+            # Prepare contents
+            contents = [prompt, uploaded]
+
+            # Use GenerationConfig for deterministic transcription
+            gen_cfg = None
+            try:
+                gen_cfg = genai.GenerationConfig(temperature=0.0, max_output_tokens=32768)
+            except Exception:
+                try:
+                    from google.generativeai import GenerationConfig
+                    gen_cfg = GenerationConfig(temperature=0.0, max_output_tokens=32768)
+                except Exception:
+                    gen_cfg = None
+
+            # Call Gemini and fail fast on any error or empty result
+            try:
+                with Timer('gemini_generate'):
+                    if gen_cfg is not None:
+                        response = model.generate_content(contents=contents, generation_config=gen_cfg)
+                    else:
+                        response = model.generate_content(contents=contents)
+
+                # Parse response
+                with Timer('parse_transcript'):
+                    transcript_text = getattr(response, 'text', None) or getattr(response, 'output', None)
+
+                    # Handle candidate-style responses (list of candidate objects)
+                    if not transcript_text and hasattr(response, 'candidates'):
+                        try:
+                            transcript_text = response.candidates[0].content if response.candidates else None
+                        except Exception:
+                            transcript_text = None
+
+                    # Handle dict-like responses or objects exposing .get()
+                    if not transcript_text and hasattr(response, 'get') and callable(getattr(response, 'get')):
+                        try:
+                            transcript_text = response.get('text') or response.get('output')
+                            if not transcript_text:
+                                candidates = response.get('candidates')
+                                if candidates:
+                                    first = candidates[0]
+                                    if isinstance(first, dict):
+                                        transcript_text = first.get('content') or first.get('text')
+                                    else:
+                                        transcript_text = getattr(first, 'content', None) or getattr(first, 'text', None)
+                        except Exception:
+                            transcript_text = None
+
+                    transcript_text = (transcript_text or "").strip()
+
+                    if not transcript_text:
+                        logger.error("Gemini returned empty transcript in Gemini-only mode")
+                        raise RuntimeError("Empty transcript from Gemini")
+
+                result = {"text": transcript_text}
+
+                # Attach perf timing summary to the transcript data when writing
+                try:
+                    perf_list = get_records(reset=True)
+                    perf_obj = {name: round(sec, 3) for name, sec in perf_list}
+                    # Save perf object in the result dictionary so it's persisted
+                    result['_perf'] = perf_obj
+                except Exception:
+                    pass
+
+            except Exception as e:
+                logger.error(f"Gemini transcription failed: {e}", exc_info=True)
+                # Fail-fast: do not fallback to Whisper in Gemini-only mode
+                raise
+
+        else:
+            if whisper is None:
+                raise RuntimeError("Whisper is not installed and no Gemini API key found")
+
+            logger.info(f"Loading Whisper model...")
+            # Load Whisper model (using 'base' model for balance of speed and accuracy)
+            model = whisper.load_model("base")
+
+            logger.info(f"Transcribing audio file: {audio_file_path}")
+            # Transcribe the audio file
+            result = model.transcribe(audio_file_path)
         
         # Get current timestamp in ISO 8601 format
         conversation_timestamp = datetime.now().isoformat()
@@ -80,8 +240,15 @@ def transcribe_conversation(audio_file_path, patient_id, doctor_id, output_dir=N
             "patient_id": patient_id,
             "doctor_id": doctor_id,
             "conversation_timestamp": conversation_timestamp,
-            "transcript": result["text"]
+            "transcript": result.get("text") if isinstance(result, dict) else (result["text"] if isinstance(result, dict) else result)
         }
+
+        # If we have performance data attached to the result (from Timer), persist it
+        try:
+            if isinstance(result, dict) and '_perf' in result:
+                transcript_data['_perf'] = result['_perf']
+        except Exception:
+            pass
         
         # Create filename with patient_id and timestamp (safe for filesystems)
         # Convert ISO timestamp to filesystem-safe format
